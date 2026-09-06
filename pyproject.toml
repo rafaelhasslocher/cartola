@@ -1,0 +1,14 @@
+[project]
+name = "cartola"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "deltalake>=1.6.3",
+    "ipykernel>=7.3.0",
+    "pandas>=3.0.5",
+    "pyarrow>=25.0.1",
+    "python-cartolafc>=3.1.0",
+    "streamlit>=1.38.0",
+]
