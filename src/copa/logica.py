@@ -225,3 +225,56 @@ def montar_linhas_mata_mata(resultados, temporada, rodada, fase, jogo_da_fase):
         df[coluna] = None
 
     return df
+
+
+def _pontuacao_time_rodada(pontuacoes, time, rodada):
+    valores = pontuacoes[
+        (pontuacoes["nome_time"] == time) & (pontuacoes["rodada"] == rodada)
+    ]["pontuacao"]
+    return round(valores.iloc[0], 2) if not valores.empty else None
+
+
+def montar_tabela_jogo_a_jogo_grupo(pontuacoes, times_grupo, rodadas):
+    rodadas = list(rodadas)
+    linhas = []
+    for time in times_grupo:
+        linha = {"time": time}
+        jogos = []
+        for i, rodada in enumerate(rodadas, start=1):
+            valor = _pontuacao_time_rodada(pontuacoes, time, rodada)
+            linha[f"jogo_{i}"] = valor
+            jogos.append(valor)
+        linha["total"] = round(sum(v for v in jogos if v is not None), 2)
+        linhas.append(linha)
+
+    return (
+        pd.DataFrame(linhas)
+        .sort_values("total", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
+def montar_tabela_jogo_a_jogo_mata_mata(pontuacoes, confrontos, rodadas):
+    rodadas = list(rodadas)
+    linhas = []
+    for time1, time2 in confrontos:
+        linha = {"time1": time1}
+        jogos_time1 = []
+        for i, rodada in enumerate(rodadas, start=1):
+            valor = _pontuacao_time_rodada(pontuacoes, time1, rodada)
+            linha[f"jogo_{i}_time1"] = valor
+            jogos_time1.append(valor)
+        linha["total_time1"] = round(sum(v for v in jogos_time1 if v is not None), 2)
+        linha["sep"] = "x"
+
+        jogos_time2 = []
+        for i, rodada in enumerate(rodadas, start=1):
+            valor = _pontuacao_time_rodada(pontuacoes, time2, rodada)
+            linha[f"jogo_{i}_time2"] = valor
+            jogos_time2.append(valor)
+        linha["total_time2"] = round(sum(v for v in jogos_time2 if v is not None), 2)
+        linha["time2"] = time2
+
+        linhas.append(linha)
+
+    return pd.DataFrame(linhas)
