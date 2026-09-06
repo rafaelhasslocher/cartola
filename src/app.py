@@ -32,7 +32,10 @@ NOMES_FASES = {
 
 
 def formatar_pontuacao(valor):
-    return "" if valor is None else f"{valor:.2f}"
+    if valor is None:
+        return ""
+    texto = f"{valor:,.2f}"
+    return texto.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def exibir_tabela(df, rotulos=None):
@@ -53,8 +56,10 @@ def exibir_tabela(df, rotulos=None):
         unsafe_allow_html=True,
     )
 
+
 def exibir_subtitulo(texto):
     st.markdown(f"<h3 style='text-align:center'>{texto}</h3>", unsafe_allow_html=True)
+
 
 st.title("Cartola - Liga e Copa")
 
@@ -75,7 +80,13 @@ with aba_liga:
     ranking = obter_ranking(CAMINHO_RANKING)
     resultados = obter_resultados(CAMINHO_RESULTADOS)
 
-    rodada_atual = ranking["rodada"].max()
+    rodadas_disponiveis = sorted(ranking["rodada"].unique())
+    rodada_atual = st.segmented_control(
+        "Rodada",
+        rodadas_disponiveis,
+        default=rodadas_disponiveis[-1],
+        key="rodada_liga",
+    )
     turno_atual = 1 if rodada_atual <= RODADA_CORTE_TURNO else 2
 
     st.header(f"Liga - rodada {rodada_atual}")
@@ -107,8 +118,17 @@ with aba_liga:
     exibir_tabela(ranking_turno, rotulos=["Nome do time", "Pontos", "Pontuação Total"])
 
 with aba_copa:
-    pontuacoes = carregar_pontuacoes(CAMINHO_DADOS)
-    rodada_atual_copa = int(pontuacoes["rodada"].max())
+    pontuacoes_completas = carregar_pontuacoes(CAMINHO_DADOS)
+    rodadas_disponiveis_copa = sorted(pontuacoes_completas["rodada"].unique())
+    rodada_atual_copa = st.segmented_control(
+        "Rodada",
+        rodadas_disponiveis_copa,
+        default=rodadas_disponiveis_copa[-1],
+        key="rodada_copa",
+    )
+    pontuacoes = pontuacoes_completas[
+        pontuacoes_completas["rodada"] <= rodada_atual_copa
+    ]
 
     temporada_atual, fase_atual = determinar_temporada_e_fase_atual_copa(
         rodada_atual_copa, CALENDARIOS_COPA_POR_TEMPORADA
