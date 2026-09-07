@@ -1,8 +1,10 @@
-import requests
 import pandas as pd
+import requests
+from cartolafc import Api, CartolaFCError
+from dados.persistencia import ler_tabela_delta
 from deltalake.exceptions import TableNotFoundError
 
-from dados.persistencia import ler_tabela_delta
+_api_cartolafc = Api()
 
 
 def get_pontuacao_time(id_time, rodada):
@@ -32,6 +34,41 @@ def coletar_pontuacoes(ids_times, rodadas):
                         "pontuacao": round(pontos, 2),
                     }
                 )
+    return dados
+
+
+def get_pontuacao_parcial_time(id_time, parciais):
+    try:
+        time = _api_cartolafc.time_parcial(id_time, parciais=parciais)
+    except CartolaFCError as e:
+        print(f"[AVISO] Falha ao calcular parcial do time {id_time}: {e}")
+        return None
+    return time.pontos
+
+
+def coletar_pontuacoes_parciais(ids_times, rodada):
+    """Coleta a pontuação AO VIVO da rodada em andamento (mercado fechado),
+    usando /atletas/pontuados via python-cartolafc. Diferente de
+    `coletar_pontuacoes`, aqui a rodada não precisa ter fechado: os pontos
+    refletem só os jogadores que já entraram em campo até o momento.
+    """
+    try:
+        parciais = _api_cartolafc.parciais()
+    except CartolaFCError as e:
+        print(f"[AVISO] Pontuação parcial indisponível agora: {e}")
+        return []
+
+    dados = []
+    for id_time in ids_times:
+        pontos = get_pontuacao_parcial_time(id_time, parciais)
+        if pontos is not None:
+            dados.append(
+                {
+                    "id_time": id_time,
+                    "rodada": rodada,
+                    "pontuacao": round(pontos, 2),
+                }
+            )
     return dados
 
 

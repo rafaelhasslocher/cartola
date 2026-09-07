@@ -1,0 +1,143 @@
+diff --git a/src/atualizar_rodada.py b/src/atualizar_rodada.py
+index f317919..314410f 100644
+--- a/src/atualizar_rodada.py
++++ b/src/atualizar_rodada.py
+@@ -1,3 +1,5 @@
++import argparse
++
+ import deltalake
+ 
+ from atualizar_copa import exibir_resultados_copa
+@@ -5,6 +7,7 @@ from calendario_liga import CONFRONTOS_LIGA
+ from caminhos import CAMINHO_DADOS, CAMINHO_RANKING, CAMINHO_RESULTADOS
+ from dados.api_cartola import (
+     coletar_pontuacoes,
++    coletar_pontuacoes_parciais,
+     montar_dataframe_pontuacoes,
+     validar_cobertura,
+ )
+@@ -19,8 +22,21 @@ from regras_liga import RODADA_CORTE_TURNO
+ from times import ID_NOME_TIME, IDS_TIMES
+ 
+ 
+-def atualizar_rodada(rodada_desejada):
+-    dados = coletar_pontuacoes(IDS_TIMES, [rodada_desejada])
++def atualizar_rodada(rodada_desejada, parcial=False):
++    if parcial:
++        print(
++            f"[INFO] Coletando pontuação PARCIAL da rodada {rodada_desejada} "
++            "(rodada ainda não fechou)..."
++        )
++        dados = coletar_pontuacoes_parciais(IDS_TIMES, rodada_desejada)
++    else:
++        dados = coletar_pontuacoes(IDS_TIMES, [rodada_desejada])
++
++    if not dados:
++        print(f"[AVISO] Nenhuma pontuação coletada para a rodada {rodada_desejada}. "
++              "Nada foi atualizado.")
++        return None
++
+     validar_cobertura(dados, IDS_TIMES, ID_NOME_TIME, [rodada_desejada])
+     df = montar_dataframe_pontuacoes(dados, ID_NOME_TIME)
+ 
+@@ -51,10 +67,38 @@ def atualizar_rodada(rodada_desejada):
+ 
+     exibir_resultados_copa(rodada_desejada)
+ 
++    if parcial:
++        print(
++            f"\n[AVISO] Os dados da rodada {rodada_desejada} acima são PARCIAIS "
++            "(rodada em andamento). Rode de novo sem --parcial quando ela fechar "
++            "para gravar o resultado definitivo."
++        )
++
+     return df_final
+ 
+ 
+-if __name__ == "__main__":
+-    RODADA_ATUAL = 25
++def _parse_args():
++    parser = argparse.ArgumentParser(
++        description="Atualiza os dados de uma rodada do Cartola."
++    )
++    parser.add_argument(
++        "rodada",
++        type=int,
++        nargs="?",
++        default=25,
++        help="Número da rodada a atualizar (padrão: 25).",
++    )
++    parser.add_argument(
++        "--parcial",
++        action="store_true",
++        help=(
++            "Atualiza com a pontuação AO VIVO da rodada, mesmo sem ela ter "
++            "fechado (requer mercado fechado / jogos em andamento)."
++        ),
++    )
++    return parser.parse_args()
+ 
+-    atualizar_rodada(RODADA_ATUAL)
++
++if __name__ == "__main__":
++    args = _parse_args()
++    atualizar_rodada(args.rodada, parcial=args.parcial)
+diff --git a/src/dados/api_cartola.py b/src/dados/api_cartola.py
+index 25536e0..264c890 100644
+--- a/src/dados/api_cartola.py
++++ b/src/dados/api_cartola.py
+@@ -1,9 +1,12 @@
+ import requests
+ import pandas as pd
++from cartolafc import Api, CartolaFCError
+ from deltalake.exceptions import TableNotFoundError
+ 
+ from dados.persistencia import ler_tabela_delta
+ 
++_api_cartolafc = Api()
++
+ 
+ def get_pontuacao_time(id_time, rodada):
+     url = f"https://api.cartola.globo.com/time/id/{id_time}/{rodada}"
+@@ -35,6 +38,41 @@ def coletar_pontuacoes(ids_times, rodadas):
+     return dados
+ 
+ 
++def get_pontuacao_parcial_time(id_time, parciais):
++    try:
++        time = _api_cartolafc.time_parcial(id_time, parciais=parciais)
++    except CartolaFCError as e:
++        print(f"[AVISO] Falha ao calcular parcial do time {id_time}: {e}")
++        return None
++    return time.pontos
++
++
++def coletar_pontuacoes_parciais(ids_times, rodada):
++    """Coleta a pontuação AO VIVO da rodada em andamento (mercado fechado),
++    usando /atletas/pontuados via python-cartolafc. Diferente de
++    `coletar_pontuacoes`, aqui a rodada não precisa ter fechado: os pontos
++    refletem só os jogadores que já entraram em campo até o momento.
++    """
++    try:
++        parciais = _api_cartolafc.parciais()
++    except CartolaFCError as e:
++        print(f"[AVISO] Pontuação parcial indisponível agora: {e}")
++        return []
++
++    dados = []
++    for id_time in ids_times:
++        pontos = get_pontuacao_parcial_time(id_time, parciais)
++        if pontos is not None:
++            dados.append(
++                {
++                    "id_time": id_time,
++                    "rodada": rodada,
++                    "pontuacao": round(pontos, 2),
++                }
++            )
++    return dados
++
++
+ def montar_dataframe_pontuacoes(dados, id_nome_time):
+     df = pd.DataFrame(dados)
+     df["nome_time"] = df["id_time"].map(id_nome_time)
