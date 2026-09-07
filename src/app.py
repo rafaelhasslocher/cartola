@@ -404,7 +404,7 @@ def exibir_linha_do_tempo_titulos(titulos, cor_accent):
         marcador = ""
         if nota:
             tem_observacao = True
-            marcador = f" <span style='opacity:0.55; font-weight:700;'>{nota}</span>"
+            marcador = f" <span style='opacity:0.75; font-weight:700;'>{nota}</span>"
         itens_html += (
             "<div style='display:flex; align-items:center; gap:16px; padding:11px 18px; "
             "border-radius:10px; margin-bottom:6px; background:rgba(128,128,128,0.05); "
@@ -418,7 +418,7 @@ def exibir_linha_do_tempo_titulos(titulos, cor_accent):
     st.markdown(f"<div>{itens_html}</div>", unsafe_allow_html=True)
 
     if tem_observacao:
-        st.caption("* Campeonato não premiado financeiramente.")
+        st.caption("*Campeonato não premiado financeiramente.")
 
 
 def exibir_historico(titulos, cor_accent, nome_campeonato):
