@@ -334,7 +334,7 @@ def exibir_tabela(
                     if tipo_destaque == "copa" and i >= qtd_classificados:
                         cor_total = COR_TOTAL_TEXTO_NEGATIVO
                     estilo_celula += (
-                        f"font-weight: 700; color: {cor_total}; font-size: 1.02rem;"
+                        f"font-weight: 700; color: {cor_total}; font-size: 0.85rem;"
                     )
                 if nome_original == "posicao":
                     estilo_celula += " font-weight: 700; opacity: 0.75;"
@@ -648,6 +648,10 @@ st.markdown(
     .tab-item.divisor {{
         margin-left: 36px;
     }}
+    .tabela td, .tabela th {{
+        font-size: 0.85rem !important;
+        padding: 6px 8px !important;
+    }}
     .tab-item.divisor::before {{
         content: "";
         position: absolute;
@@ -659,6 +663,7 @@ st.markdown(
         background: {COR_LIGA};
         opacity: 0.9;
     }}
+    
 
     /* ---------- Seletor de rodada (HTML/CSS próprio) ---------- */
     .rodada-nav {{
