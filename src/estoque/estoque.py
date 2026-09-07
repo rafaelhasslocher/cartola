@@ -1,3 +1,7 @@
+import sys
+
+sys.path.insert(0, "..")
+
 import deltalake
 
 from caminhos import CAMINHO_DADOS
@@ -9,7 +13,7 @@ from dados.api_cartola import (
 )
 from times import ID_NOME_TIME, IDS_TIMES
 
-RODADA_ATUAL = 25
+RODADA_ATUAL = 26
 
 ultima_rodada = obter_ultima_rodada_registrada(CAMINHO_DADOS)
 if RODADA_ATUAL < ultima_rodada:
@@ -21,6 +25,7 @@ if RODADA_ATUAL < ultima_rodada:
 dados = coletar_pontuacoes(IDS_TIMES, range(1, RODADA_ATUAL + 1))
 validar_cobertura(dados, IDS_TIMES, ID_NOME_TIME, range(1, RODADA_ATUAL + 1))
 df = montar_dataframe_pontuacoes(dados, ID_NOME_TIME)
+df["definitivo"] = True
 
 deltalake.write_deltalake(
     CAMINHO_DADOS,

@@ -17,42 +17,42 @@ CALENDARIOS_COPA_POR_TEMPORADA = {
 GRUPOS_COPA_POR_TEMPORADA = {
     1: {
         "grupo_a": [
-            "Pigeon Boiteux OSC (PV)",
-            "Baguetty e os perus (Camilla)",
-            "Kyrolina FC (Renata)",
-            "Club silencio (Ruy)",
-            "Paquetetra (Hammes)",
+            "Pigeon Boiteux OSC",
+            "Baguetty e os perus",
+            "Kyrolina FC",
+            "Club silencio",
+            "Paquetetra",
         ],
         "grupo_b": [
-            "Ansiedade Prime FC (Gui)",
-            "GARANTES (Garantes)",
-            "Arãcanela F.C. (Feijó)",
-            "Travesseiros confortáveis FC (Bruna)",
-            "São Janumário FC (Mario)",
+            "Ansiedade Prime FC",
+            "GARANTES",
+            "Arãcanela F.C.",
+            "Travesseiros confortáveis FC",
+            "São Janumário FC",
         ],
     },
     2: {
         "grupo_a": [
-            "CAIO JÚNIOR F.C. ®️ (Rafa)",
-            "Baguetty e os perus (Camilla)",
-            "Arãcanela F.C. (Feijó)",
-            "Inhames (Ian)",
-            "São Janumário FC (Mario)",
+            "CAIO JÚNIOR F.C. ®️",
+            "Baguetty e os perus",
+            "Arãcanela F.C.",
+            "Inhames",
+            "São Janumário FC",
         ],
         "grupo_b": [
-            "Pigeon Boiteux OSC (PV)",
-            "GARANTES (Garantes)",
-            "Travesseiros confortáveis FC (Bruna)",
-            "Paquetetra (Hammes)",
-            "Club silencio (Ruy)",
+            "Pigeon Boiteux OSC",
+            "GARANTES",
+            "Travesseiros confortáveis FC",
+            "Paquetetra",
+            "Club silencio",
         ],
     },
 }
 
 
 TIMES_FORA_POR_TEMPORADA = {
-    1: ["CAIO JÚNIOR F.C. ®️ (Rafa)", "Inhames (Ian)"],
-    2: ["Ansiedade Prime FC (Gui)", "Kyrolina FC (Renata)"],
+    1: ["CAIO JÚNIOR F.C. ®️", "Inhames"],
+    2: ["Ansiedade Prime FC", "Kyrolina FC"],
 }
 
 

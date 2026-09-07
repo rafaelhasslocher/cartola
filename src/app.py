@@ -27,6 +27,7 @@ from copa.logica import (
 )
 from dados.persistencia import carregar_pontuacoes, obter_ranking, obter_resultados
 from regras_liga import MARGEM_EMPATE, RODADA_CORTE_TURNO
+from times import nome_completo
 
 
 def _versao_arquivo(caminho):
@@ -74,8 +75,8 @@ COR_TOTAL_TEXTO = "#1F8A56"
 COR_TOTAL_TEXTO_NEGATIVO = "#C0392B"
 
 
-_NOMES_TIMES_LIGA = {c["time1"] for c in CONFRONTOS_LIGA} | {
-    c["time2"] for c in CONFRONTOS_LIGA
+_NOMES_TIMES_LIGA = {nome_completo(c["time1"]) for c in CONFRONTOS_LIGA} | {
+    nome_completo(c["time2"]) for c in CONFRONTOS_LIGA
 }
 _LARGURA_NOME_TIME_BASE = f"{max(len(n) for n in _NOMES_TIMES_LIGA) + 2}ch"
 LARGURA_NOME_TIME = "var(--largura-nome-time)"
@@ -126,6 +127,47 @@ CAMPEOES_COPA = [
     ("2025/2", "Ian", None),
     ("2026/1", "Gui", None),
 ]
+
+TIMES_CAMPEOES_LIGA = {
+    "2017/2": "?",
+    "2018/1": "CAIO JÚNIOR F.C. ®️",
+    "2018/2": "?",
+    "2019/1": "CAIO JÚNIOR F.C. ®️",
+    "2019/2": "Pombo Manco SC",
+    "2020/1": "CAIO JÚNIOR F.C. ®️",
+    "2020/2": "Pombo Manco SC",
+    "2021/1": "CAIO JÚNIOR F.C. ®️",
+    "2021/2": "Defensa y Justicia",
+    "2022/1": "Kyrolina FC",
+    "2022/2": "Trilogia dos sonhos",
+    "2023/1": "Arãcanela F.C.",
+    "2023/2": "Club Silencio",
+    "2024/1": "Arãcanela F.C.",
+    "2024/2": "Arãcanela F.C.",
+    "2025/1": "Baguetty E Os Perus",
+    "2025/2": "CAIO JÚNIOR F.C. ®️",
+    "2026/1": "Ansiedade Prime FC",
+}
+
+TIMES_CAMPEOES_COPA = {
+    "2018/1": "Kyrolina FC",
+    "2018/2": "?",
+    "2019/1": "Pombo Manco SC",
+    "2019/2": "Pombo Manco SC",
+    "2020/1": "Kyrolina FC",
+    "2020/2": "?",
+    "2021/1": "Defensa y Justicia",
+    "2021/2": "Viihtubizado",
+    "2022/1": "Trilogia dos sonhos",
+    "2022/2": "Kyrolina FC",
+    "2023/1": "Tiozito devolva meu $ pls F.C.",
+    "2023/2": "Arãcanela F.C.",
+    "2024/1": "HCOONa Matata",
+    "2024/2": "Club Silencio",
+    "2025/1": "Arãcanela F.C.",
+    "2025/2": "Tof&Cookie de Futebol e Regatas",
+    "2026/1": "Ansiedade Prime FC",
+}
 
 
 MAPA_RODADA_LIGA = {
@@ -564,8 +606,11 @@ def exibir_ranking_titulos(titulos, cor_accent):
     )
 
 
-def exibir_linha_do_tempo_titulos(titulos, cor_accent):
-    """Lista cronológica (mais recente primeiro) de campeões por temporada."""
+def exibir_linha_do_tempo_titulos(titulos, cor_accent, times_por_temporada=None):
+    """Lista cronológica (mais recente primeiro) de campeões por temporada,
+    mostrando o nome do time (normal) e o nome do jogador (negrito). O nome
+    do time é buscado por temporada, já que pode mudar de uma para outra."""
+    times_por_temporada = times_por_temporada or {}
     itens_html = ""
     tem_observacao = False
     for temporada, campeao, nota in reversed(titulos):
@@ -573,13 +618,19 @@ def exibir_linha_do_tempo_titulos(titulos, cor_accent):
         if nota:
             tem_observacao = True
             marcador = f" <span style='opacity:0.75; font-weight:700;'>{nota}</span>"
+        nome_time = times_por_temporada.get(temporada)
+        rotulo_campeao = (
+            f"{nome_time} — <span style='font-weight:800;'>{campeao}</span>"
+            if nome_time
+            else f"<span style='font-weight:800;'>{campeao}</span>"
+        )
         itens_html += (
             "<div style='display:flex; align-items:center; gap:16px; padding:11px 18px; "
             "border-radius:10px; margin-bottom:6px; background:rgba(128,128,128,0.05); "
             "transition: background-color 0.15s;'>"
             f"<div style='min-width:64px; font-weight:800; color:{cor_accent}; font-size:0.95rem;'>{temporada}</div>"
             "<div style='font-size:1.15rem;'>🏆</div>"
-            f"<div style='font-weight:600; font-size:1rem;'>{campeao}{marcador}</div>"
+            f"<div style='font-weight:600; font-size:1rem;'>{rotulo_campeao}{marcador}</div>"
             "</div>"
         )
 
@@ -589,11 +640,11 @@ def exibir_linha_do_tempo_titulos(titulos, cor_accent):
         st.caption("*Campeonato não premiado financeiramente.")
 
 
-def exibir_historico(titulos, cor_accent, nome_campeonato):
+def exibir_historico(titulos, cor_accent, nome_campeonato, times_por_temporada=None):
     exibir_cabecalho_secao(f"Histórico — {nome_campeonato}", cor_accent)
     exibir_ranking_titulos(titulos, cor_accent)
     exibir_subtitulo("Campeões por temporada", cor_accent)
-    exibir_linha_do_tempo_titulos(titulos, cor_accent)
+    exibir_linha_do_tempo_titulos(titulos, cor_accent, times_por_temporada)
 
 
 st.set_page_config(
@@ -839,6 +890,8 @@ if aba_atual == "liga":
             ),
             axis=1,
         )
+        confrontos_rodada["time1"] = confrontos_rodada["time1"].map(nome_completo)
+        confrontos_rodada["time2"] = confrontos_rodada["time2"].map(nome_completo)
         confrontos_rodada.insert(2, "x", "x")
         confrontos_rodada["pontuacao_time1"] = confrontos_rodada["pontuacao_time1"].map(
             formatar_pontuacao
@@ -864,6 +917,7 @@ if aba_atual == "liga":
             .reset_index(drop=True)
             .copy()
         )
+        ranking_turno["time"] = ranking_turno["time"].map(nome_completo)
         ranking_turno.insert(0, "posicao", range(1, len(ranking_turno) + 1))
         ranking_turno["pontuacao_total"] = ranking_turno["pontuacao_total"].map(
             formatar_pontuacao
@@ -891,9 +945,9 @@ if aba_atual == "liga":
         confrontos_futuros = pd.DataFrame(
             [
                 {
-                    "time1": c["time1"],
+                    "time1": nome_completo(c["time1"]),
                     "x": "x",
-                    "time2": c["time2"],
+                    "time2": nome_completo(c["time2"]),
                     "rodada_liga": c["rodada_liga"],
                 }
                 for c in CONFRONTOS_LIGA
@@ -917,7 +971,7 @@ if aba_atual == "liga":
             st.caption("A classificação aparece aqui assim que a rodada acontecer.")
 
 elif aba_atual == "hist_liga":
-    exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga")
+    exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga", TIMES_CAMPEOES_LIGA)
 
 elif aba_atual == "copa":
     pontuacoes_completas = _carregar_pontuacoes_cache(
@@ -979,6 +1033,7 @@ elif aba_atual == "copa":
                 tabela_grupo = montar_tabela_jogo_a_jogo_grupo(
                     pontuacoes, times_grupo, RODADAS_FASE_DE_GRUPOS
                 )
+                tabela_grupo["time"] = tabela_grupo["time"].map(nome_completo)
                 n_jogos = len(list(RODADAS_FASE_DE_GRUPOS))
                 for i in range(1, n_jogos + 1):
                     tabela_grupo[f"jogo_{i}"] = tabela_grupo[f"jogo_{i}"].map(
@@ -1005,7 +1060,9 @@ elif aba_atual == "copa":
 
             if TIMES_FORA_COPA:
                 exibir_subtitulo("Já classificados para as quartas", COR_COPA)
-                tabela_times_fora = pd.DataFrame({"Nome do time": TIMES_FORA_COPA})
+                tabela_times_fora = pd.DataFrame(
+                    {"Nome do time": [nome_completo(t) for t in TIMES_FORA_COPA]}
+                )
                 exibir_tabela(
                     tabela_times_fora,
                     rotulos=["Time"],
@@ -1055,6 +1112,8 @@ elif aba_atual == "copa":
             tabela_mata_mata = montar_tabela_jogo_a_jogo_mata_mata(
                 pontuacoes, confrontos_fase, rodadas_fase
             )
+            tabela_mata_mata["time1"] = tabela_mata_mata["time1"].map(nome_completo)
+            tabela_mata_mata["time2"] = tabela_mata_mata["time2"].map(nome_completo)
             n_jogos = len(list(rodadas_fase))
             colunas_time1 = [f"jogo_{i}_time1" for i in range(1, n_jogos + 1)]
             colunas_time2 = [f"jogo_{i}_time2" for i in range(1, n_jogos + 1)]
@@ -1095,4 +1154,4 @@ elif aba_atual == "copa":
             )
 
 elif aba_atual == "hist_copa":
-    exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa")
+    exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa", TIMES_CAMPEOES_COPA)
