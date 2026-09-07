@@ -68,6 +68,7 @@ COR_PRATA = "rgba(192, 192, 192, 0.24)"
 
 COR_VENCEDOR = "rgba(46, 204, 113, 0.20)"
 COR_PERDEDOR = "rgba(231, 76, 60, 0.16)"
+COR_EMPATE = "rgba(241, 196, 15, 0.22)"
 
 COR_TOTAL_TEXTO = "#1F8A56"
 COR_TOTAL_TEXTO_NEGATIVO = "#C0392B"
@@ -76,12 +77,13 @@ COR_TOTAL_TEXTO_NEGATIVO = "#C0392B"
 _NOMES_TIMES_LIGA = {c["time1"] for c in CONFRONTOS_LIGA} | {
     c["time2"] for c in CONFRONTOS_LIGA
 }
-LARGURA_NOME_TIME = f"{max(len(n) for n in _NOMES_TIMES_LIGA) + 2}ch"
-LARGURA_PONTOS = "90px"
-LARGURA_X = "50px"
-LARGURA_POSICAO = "60px"
-LARGURA_TOTAL = "150px"
-LARGURA_JOGOS = "70px"
+_LARGURA_NOME_TIME_BASE = f"{max(len(n) for n in _NOMES_TIMES_LIGA) + 2}ch"
+LARGURA_NOME_TIME = "var(--largura-nome-time)"
+LARGURA_PONTOS = "var(--largura-pontos)"
+LARGURA_X = "var(--largura-x)"
+LARGURA_POSICAO = "var(--largura-posicao)"
+LARGURA_TOTAL = "var(--largura-total)"
+LARGURA_JOGOS = "var(--largura-jogos)"
 
 
 CAMPEOES_LIGA = [
@@ -308,6 +310,10 @@ def exibir_tabela(
                         estilo_celula += (
                             f"background-color: {COR_VENCEDOR}; font-weight: 700;"
                         )
+                elif col_idx != idx_x:
+                    estilo_celula += (
+                        f"background-color: {COR_EMPATE}; font-weight: 700;"
+                    )
                 if col_idx == idx_x:
                     estilo_celula += (
                         f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
@@ -347,7 +353,7 @@ def exibir_tabela(
         linhas += f"<tr style='{estilo_linha}'>{celulas}</tr>"
 
     st.markdown(
-        f"<div style='overflow-x: auto; -webkit-overflow-scrolling: touch; "
+        f"<div class='tabela' style='overflow-x: auto; -webkit-overflow-scrolling: touch; "
         f"margin-bottom: 10px; text-align: center; line-height: 1;'>"
         f"<div style='display: inline-block; text-align: left; border-radius: 12px; "
         f"box-shadow: 0 1px 6px rgba(0,0,0,0.10); border: 1px solid rgba(128,128,128,0.15); "
@@ -594,6 +600,14 @@ st.set_page_config(
 st.markdown(
     f"""
     <style>
+    :root {{
+        --largura-nome-time: {_LARGURA_NOME_TIME_BASE};
+        --largura-pontos: 90px;
+        --largura-x: 50px;
+        --largura-posicao: 60px;
+        --largura-total: 150px;
+        --largura-jogos: 70px;
+    }}
     .block-container {{
         padding-top: 2rem;
         padding-bottom: 2rem;
@@ -647,10 +661,6 @@ st.markdown(
     /* divisória rosa fixa entre o grupamento da Liga e o da Copa */
     .tab-item.divisor {{
         margin-left: 36px;
-    }}
-    .tabela td, .tabela th {{
-        font-size: 0.85rem !important;
-        padding: 6px 8px !important;
     }}
     .tab-item.divisor::before {{
         content: "";
@@ -717,6 +727,18 @@ st.markdown(
        Tudo aqui fica dentro da media query, então a visualização em
        telas largas (desktop) permanece exatamente igual. */
     @media (max-width: 600px) {{
+        :root {{
+            --largura-nome-time: clamp(56px, 24vw, 100px);
+            --largura-pontos: 58px;
+            --largura-x: 32px;
+            --largura-posicao: 38px;
+            --largura-total: 96px;
+            --largura-jogos: 48px;
+        }}
+        .tabela table td, .tabela table th {{
+            font-size: 0.72rem !important;
+            padding: 5px 5px !important;
+        }}
         .block-container {{
             padding-left: 0.8rem;
             padding-right: 0.8rem;
