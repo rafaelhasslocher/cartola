@@ -955,6 +955,15 @@ elif aba_atual == "copa":
                     colunas_total=["total"],
                 )
 
+            if TIMES_FORA_COPA:
+                exibir_subtitulo("Já classificados para as quartas", COR_COPA)
+                tabela_times_fora = pd.DataFrame({"Nome do time": TIMES_FORA_COPA})
+                exibir_tabela(
+                    tabela_times_fora,
+                    rotulos=["Time"],
+                    cor_accent=COR_COPA,
+                )
+
         else:
             classificados_grupos = definir_classificados_fase_de_grupos(
                 pontuacoes,
