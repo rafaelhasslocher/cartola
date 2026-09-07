@@ -26,7 +26,7 @@ from copa.logica import (
     rodadas_disputadas,
 )
 from dados.persistencia import carregar_pontuacoes, obter_ranking, obter_resultados
-from regras_liga import RODADA_CORTE_TURNO
+from regras_liga import MARGEM_EMPATE, RODADA_CORTE_TURNO
 
 
 def _versao_arquivo(caminho):
@@ -291,7 +291,13 @@ def exibir_tabela(
 
             for col_idx, valor in enumerate(linha):
                 estilo_celula = ""
-                if total1 > total2:
+                if abs(total1 - total2) < MARGEM_EMPATE and col_idx != idx_x:
+                    # empate pela margem
+                    estilo_celula += (
+                        f"background-color: {COR_EMPATE}; font-weight: 700;"
+                    )
+                elif total1 > total2:
+                    # time1 venceu
                     if col_idx < idx_x:
                         estilo_celula += (
                             f"background-color: {COR_VENCEDOR}; font-weight: 700;"
@@ -301,6 +307,7 @@ def exibir_tabela(
                             f"background-color: {COR_PERDEDOR}; font-weight: 700;"
                         )
                 elif total2 > total1:
+                    # time2 venceu
                     if col_idx < idx_x:
                         estilo_celula += (
                             f"background-color: {COR_PERDEDOR}; font-weight: 700;"
@@ -309,14 +316,7 @@ def exibir_tabela(
                         estilo_celula += (
                             f"background-color: {COR_VENCEDOR}; font-weight: 700;"
                         )
-                elif col_idx != idx_x:
-                    estilo_celula += (
-                        f"background-color: {COR_EMPATE}; font-weight: 700;"
-                    )
-                if col_idx == idx_x:
-                    estilo_celula += (
-                        f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
-                    )
+
                 celulas += _celula(valor, estilo_borda_base + estilo_celula)
 
         else:
@@ -963,11 +963,6 @@ elif aba_atual == "copa":
                     tipo_destaque="copa",
                     cor_accent=COR_COPA,
                     colunas_total=["total"],
-                    larguras_colunas=(
-                        [LARGURA_NOME_TIME]
-                        + [LARGURA_PONTOS] * n_jogos
-                        + [LARGURA_TOTAL]
-                    ),
                 )
 
             if TIMES_FORA_COPA:
@@ -977,7 +972,6 @@ elif aba_atual == "copa":
                     tabela_times_fora,
                     rotulos=["Time"],
                     cor_accent=COR_COPA,
-                    larguras_colunas=[LARGURA_NOME_TIME],
                 )
 
         else:
@@ -1053,13 +1047,6 @@ elif aba_atual == "copa":
                 rotulos=rotulos,
                 tipo_destaque="mata_mata",
                 cor_accent=COR_COPA,
-                larguras_colunas=(
-                    [LARGURA_NOME_TIME]
-                    + [LARGURA_PONTOS] * n_jogos
-                    + [LARGURA_TOTAL, LARGURA_X, LARGURA_TOTAL]
-                    + [LARGURA_PONTOS] * n_jogos
-                    + [LARGURA_NOME_TIME]
-                ),
             )
 
 elif aba_atual == "hist_copa":
