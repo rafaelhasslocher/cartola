@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import pandas as pd
 import streamlit as st
 
@@ -171,6 +173,8 @@ def exibir_tabela(
                 estilo_linha += f" background-color: {COR_OURO}; font-weight: 700;"
             elif i == 1:
                 estilo_linha += f" background-color: {COR_PRATA}; font-weight: 700;"
+            else:
+                estilo_linha += " font-weight:620"
         elif tipo_destaque == "copa":
             if i < qtd_classificados:
                 estilo_linha += f" background-color: {COR_VENCEDOR};"
@@ -187,8 +191,7 @@ def exibir_tabela(
             total2 = parse_pontuacao(linha[idx_total2])
 
             for col_idx, valor in enumerate(linha):
-                estilo_celula = ""
-
+                estilo_celula = " font-weight: 700;"
                 if total1 > total2:
                     if col_idx < idx_sep:
                         estilo_celula += f"background-color: {COR_VENCEDOR};"
@@ -251,6 +254,13 @@ def exibir_tabela(
                     if col_idx < len(colunas_originais)
                     else None
                 )
+                if nome_original in ("Nome do time", "time1", "time2"):
+                    estilo_celula += " font-weight: 700;"
+                if tipo_destaque == "copa":
+                    # times e pontuações da fase de grupos da Copa em negrito,
+                    # no mesmo padrão da tabela de confrontos da Liga
+                    estilo_celula += " font-weight: 700;"
+
                 if nome_original in colunas_total:
                     cor_total = COR_TOTAL_TEXTO
                     if tipo_destaque == "copa" and i >= qtd_classificados:
@@ -351,13 +361,78 @@ def exibir_confrontos_liga(df_confrontos, cor_accent, com_pontuacao):
         )
 
 
-def montar_rotulo_rodada(definitivos):
-    def rotulo(rodada):
-        if not definitivos.get(rodada, True):
-            return f"{rodada} - Parcial"
-        return str(rodada)
+def construir_href(**overrides):
+    """Monta a query string da URL atual, sobrescrevendo apenas as chaves
+    passadas em overrides e preservando as demais (ex.: ao trocar a rodada
+    da Liga, a aba atual e a rodada da Copa continuam na URL)."""
+    params = dict(st.query_params)
+    for chave, valor in overrides.items():
+        params[chave] = str(valor)
+    return "?" + urlencode(params)
 
-    return rotulo
+
+def obter_param_int(nome, valor_padrao):
+    valor = st.query_params.get(nome)
+    if valor is None:
+        return valor_padrao
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return valor_padrao
+
+
+ABAS = [
+    ("liga", "🏆 Liga", "liga"),
+    ("hist_liga", "📜 Histórico Liga", "liga"),
+    ("copa", "🥇 Copa", "copa"),
+    ("hist_copa", "📜 Histórico Copa", "copa"),
+]
+
+
+def exibir_navegacao_abas(aba_atual):
+    """Barra de abas 100% própria (HTML/CSS puro), com uma divisória rosa
+    fixa entre o grupamento da Liga e o da Copa. Não depende de nenhuma
+    classe interna do Streamlit/BaseWeb, então o visual não pode "quebrar"
+    por causa de mudanças de versão."""
+    itens_html = ""
+    for chave, rotulo, grupo in ABAS:
+        classes = "tab-item"
+        if chave == aba_atual:
+            classes += f" ativa grupo-{grupo}"
+        if chave == "copa":
+            classes += " divisor"
+        href = construir_href(aba=chave)
+        itens_html += f"<a class='{classes}' href='{href}' target='_self'>{rotulo}</a>"
+    st.markdown(f"<div class='tab-nav'>{itens_html}</div>", unsafe_allow_html=True)
+
+
+def exibir_seletor_rodada(
+    rodadas, valor_atual, param_nome, aba_nome, cor_accent, definitivos=None
+):
+    """Seletor de rodada 100% próprio (HTML/CSS puro). Cada rodada é um link
+    que atualiza a URL; nenhum CSS aqui depende de estrutura de terceiros,
+    então as bordas ficam sempre quadradas e não há "brilho" de seleção que
+    possa vazar sobre o botão vizinho (usamos box-shadow inset, que nunca
+    ultrapassa os limites do próprio elemento)."""
+    definitivos = definitivos or {}
+    itens_html = ""
+    for r in rodadas:
+        parcial = not definitivos.get(r, True)
+        classes = "rodada-pill"
+        if r == valor_atual:
+            classes += " ativa"
+        if parcial:
+            classes += " parcial"
+        href = construir_href(aba=aba_nome, **{param_nome: r})
+        rotulo = f"{r} - Parcial" if parcial else str(r)
+        titulo = " title='Rodada parcial'" if parcial else ""
+        itens_html += (
+            f"<a class='{classes}' href='{href}' target='_self'{titulo}>{rotulo}</a>"
+        )
+    st.markdown(
+        f"<div class='rodada-nav' style='--accent:{cor_accent};'>{itens_html}</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def exibir_ranking_titulos(titulos, cor_accent):
@@ -430,7 +505,6 @@ def exibir_historico(titulos, cor_accent, nome_campeonato):
 
 st.set_page_config(
     page_title="Cartola Djamba Feipa - 2026",
-    page_icon="⚽",
     layout="centered",
 )
 
@@ -442,126 +516,128 @@ st.markdown(
         padding-bottom: 2rem;
         max-width: 900px;
     }}
-    .stTabs [data-baseweb="tab-list"] {{
+    h1 {{
+        font-weight: 800 !important;
+        letter-spacing: -0.02em;
+        font-size: 2.8rem !important;
+        text-align: center;
+        color: rgba(20, 19, 20, 0.75) !important;
+    }}
+
+    /* ---------- Navegação por abas (HTML/CSS próprio) ---------- */
+    .tab-nav {{
+        display: flex;
+        justify-content: flex-start;
         gap: 8px;
         row-gap: 10px;
+        margin-top: 24px;
         margin-bottom: 14px;
         border-bottom: 2px solid rgba(128, 128, 128, 0.15);
-        justify-content: center;
         flex-wrap: wrap;
     }}
-    .stTabs [data-baseweb="tab"] {{
+    .tab-item {{
+        padding: 6px 10px 10px 10px;
         font-weight: 800;
-        font-size: 1.15rem;
-        padding: 8px 12px 14px 12px;
+        font-size: 0.90rem;
+        text-decoration: none !important;
+        color: rgba(120, 120, 120, 0.85);
+        border-bottom: 4px solid transparent;
+        position: relative;
         white-space: nowrap;
     }}
-    .stTabs [aria-selected="true"] {{
-        color: {COR_LIGA} !important;
-        border-bottom: 4px solid {COR_LIGA} !important;
+    /* garante que nenhum estilo global de link (ex.: sublinhado padrão do
+       navegador ou de folhas de estilo do Streamlit) apareça nas abas */
+    .tab-nav a, .tab-nav a:hover, .tab-nav a:visited, .tab-nav a:active {{
+        text-decoration: none !important;
     }}
-    /* separador visual entre o grupamento da Liga (2 primeiras abas) e o
-       grupamento da Copa (2 últimas): uma barra rosa sólida entre elas,
-       e cor de destaque própria da Copa quando selecionada */
-    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3) {{
+    .tab-item:hover {{
+        color: rgba(80, 80, 80, 0.95);
+    }}
+    .tab-item.ativa.grupo-liga {{
+        color: {COR_LIGA};
+        border-bottom-color: {COR_LIGA};
+    }}
+    .tab-item.ativa.grupo-copa {{
+        color: {COR_COPA};
+        border-bottom-color: {COR_COPA};
+    }}
+    /* divisória rosa fixa entre o grupamento da Liga e o da Copa */
+    .tab-item.divisor {{
         margin-left: 36px;
-        position: relative;
     }}
-    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)::before {{
+    .tab-item.divisor::before {{
         content: "";
         position: absolute;
         left: -20px;
-        top: -8px;
-        bottom: -8px;
+        top: -0.25em;
+        bottom: -0.25em;
         width: 4px;
         border-radius: 3px;
         background: {COR_LIGA};
         opacity: 0.9;
     }}
-    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(3)[aria-selected="true"],
-    .stTabs [data-baseweb="tab-list"] button[data-baseweb="tab"]:nth-child(4)[aria-selected="true"] {{
-        color: {COR_COPA} !important;
-        border-bottom: 4px solid {COR_COPA} !important;
-    }}
-    div[role="radiogroup"] label, .stSegmentedControl label {{
-        font-weight: 600;
-    }}
-    div[data-testid="stSegmentedControl"] {{
+
+    /* ---------- Seletor de rodada (HTML/CSS próprio) ---------- */
+    .rodada-nav {{
         display: flex;
+        flex-wrap: wrap;
         justify-content: center;
-        border-radius: 0 !important;
-        overflow: visible !important;
+        gap: 6px;
+        margin: 4px 0 18px 0;
     }}
-    div[data-testid="stSegmentedControl"] > div {{
-        border-radius: 0 !important;
-        overflow: visible !important;
-    }}
-    div[role="radiogroup"] {{
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 6px !important;
-        width: 100%;
-        border-radius: 0 !important;
-        overflow: visible !important;
-    }}
-    div[role="radiogroup"] > label {{
-        flex: 0 0 60px !important;
-        width: 60px !important;
-        box-sizing: border-box;
-        display: flex !important;
-        justify-content: center;
+    .rodada-pill {{
+        flex: 0 0 46px;
+        width: 46px;
+        height: 34px;
+        display: flex;
         align-items: center;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-    /* Cada botão de rodada é independente (há gap entre eles), então cada um
-       recebe sua própria borda completa e cantos retos — sem depender do
-       estado de hover/seleção do vizinho, e sem herdar o arredondamento do
-       contêiner do grupo (que arredondava só as pontas 1 e 38). */
-    div[role="radiogroup"],
-    div[role="radiogroup"] > label,
-    div[role="radiogroup"] > label *,
-    div[data-testid="stSegmentedControl"] * {{
-        border-radius: 0 !important;
-    }}
-    div[role="radiogroup"] > label > div:first-child,
-    div[role="radiogroup"] > label:hover > div:first-child,
-    div[role="radiogroup"] > label:focus-within > div:first-child {{
-        border: 1px solid rgba(128, 128, 128, 0.35) !important;
-        box-sizing: border-box;
-        box-shadow: none !important;
-        position: relative;
-        z-index: 0;
-    }}
-    div[role="radiogroup"] > label p {{
+        justify-content: center;
+        text-decoration: none;
+        font-weight: 700;
         font-size: 0.85rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        color: inherit;
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        border-radius: 0;
+        box-sizing: border-box;
+        background: transparent;
     }}
-    h1 {{
-        font-weight: 800 !important;
-        letter-spacing: -0.02em;
-        font-size: 1.8rem !important;
-        text-align: center;
+    .rodada-pill:hover {{
+        border-color: var(--accent);
+    }}
+    .rodada-pill.ativa {{
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }}
+    /* indicador de "rodada parcial": o rótulo mostra "N - Parcial" por
+       extenso, então o botão precisa de largura livre (os demais continuam
+       com o tamanho fixo, em formato de quadrado) */
+    .rodada-pill.parcial {{
+        flex: 0 0 auto;
+        width: auto;
+        padding: 0 10px;
+    }}
+    .rodada-pill.parcial:not(.ativa) {{
+        border-color: var(--accent);
+        box-shadow: inset 0 -3px 0 var(--accent);
+    }}
+    .rodada-pill.parcial.ativa {{
+        box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.85);
     }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-st.title("⚽ Cartola Djamba Feipa - 2026")
+st.title("Cartola Djamba Feipa - 2026")
 
-aba_liga, aba_historico_liga, aba_copa, aba_historico_copa = st.tabs(
-    ["🏆 Liga", "📜 Histórico Liga", "🥇 Copa", "📜 Histórico Copa"]
-)
+aba_atual = st.query_params.get("aba", "liga")
+if aba_atual not in {chave for chave, _, _ in ABAS}:
+    aba_atual = "liga"
 
-with aba_liga:
+exibir_navegacao_abas(aba_atual)
+
+if aba_atual == "liga":
     ranking = obter_ranking(CAMINHO_RANKING)
     resultados = obter_resultados(CAMINHO_RESULTADOS)
 
@@ -575,12 +651,17 @@ with aba_liga:
         else {}
     )
     rodada_default = rodadas_jogadas[-1] if rodadas_jogadas else rodadas_disponiveis[-1]
-    rodada_atual = st.segmented_control(
-        "Rodada",
+    rodada_atual = obter_param_int("rodada_liga", rodada_default)
+    if rodada_atual not in rodadas_disponiveis:
+        rodada_atual = rodada_default
+
+    exibir_seletor_rodada(
         rodadas_disponiveis,
-        default=rodada_default,
-        format_func=montar_rotulo_rodada(definitivos_liga),
-        key="rodada_liga",
+        rodada_atual,
+        param_nome="rodada_liga",
+        aba_nome="liga",
+        cor_accent=COR_LIGA,
+        definitivos=definitivos_liga,
     )
 
     rodada_ja_ocorreu = rodada_atual in rodadas_jogadas
@@ -662,10 +743,10 @@ with aba_liga:
             exibir_confrontos_liga(confrontos_futuros, COR_LIGA, com_pontuacao=False)
             st.caption("A classificação aparece aqui assim que a rodada acontecer.")
 
-with aba_historico_liga:
+elif aba_atual == "hist_liga":
     exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga")
 
-with aba_copa:
+elif aba_atual == "copa":
     pontuacoes_completas = carregar_pontuacoes(CAMINHO_DADOS)
     rodadas_disponiveis_copa = sorted(pontuacoes_completas["rodada"].unique())
     definitivos_copa = (
@@ -676,13 +757,20 @@ with aba_copa:
         if "definitivo" in pontuacoes_completas.columns
         else {}
     )
-    rodada_atual_copa = st.segmented_control(
-        "Rodada",
+    rodada_default_copa = rodadas_disponiveis_copa[-1]
+    rodada_atual_copa = obter_param_int("rodada_copa", rodada_default_copa)
+    if rodada_atual_copa not in rodadas_disponiveis_copa:
+        rodada_atual_copa = rodada_default_copa
+
+    exibir_seletor_rodada(
         rodadas_disponiveis_copa,
-        default=rodadas_disponiveis_copa[-1],
-        format_func=montar_rotulo_rodada(definitivos_copa),
-        key="rodada_copa",
+        rodada_atual_copa,
+        param_nome="rodada_copa",
+        aba_nome="copa",
+        cor_accent=COR_COPA,
+        definitivos=definitivos_copa,
     )
+
     pontuacoes = pontuacoes_completas[
         pontuacoes_completas["rodada"] <= rodada_atual_copa
     ]
@@ -810,5 +898,5 @@ with aba_copa:
                 cor_accent=COR_COPA,
             )
 
-with aba_historico_copa:
+elif aba_atual == "hist_copa":
     exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa")
