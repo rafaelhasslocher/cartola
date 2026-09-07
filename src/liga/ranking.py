@@ -93,7 +93,7 @@ def _pontuacao_total_por_time(tabela_resultados):
     )
 
 
-def montar_ranking_final(tabela_resultados, rodada):
+def montar_ranking_final(tabela_resultados, rodada, definitivo=True):
     pontos = (
         _pontos_por_time(tabela_resultados)
         .groupby(["time", "turno"], as_index=False)["pontos"]
@@ -108,6 +108,7 @@ def montar_ranking_final(tabela_resultados, rodada):
 
     ranking = pontos.merge(totais, on=["time", "turno"], how="left")
     ranking["rodada"] = rodada
+    ranking["definitivo"] = definitivo
 
     return ranking.sort_values(
         by=["turno", "pontos", "pontuacao_total"], ascending=False
@@ -121,7 +122,7 @@ def exibir_resultados(df_final, turno=None):
         resultados_turno.index += 1
         print(f"Resultados {t}º turno:")
         print(
-            resultados_turno.drop(columns=["turno", "rodada"])
+            resultados_turno.drop(columns=["turno", "rodada", "definitivo"])
             .rename(
                 columns={
                     "time": "Nome do time",

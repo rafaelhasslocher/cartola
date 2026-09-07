@@ -1,8 +1,9 @@
 import pandas as pd
 import requests
 from cartolafc import Api, CartolaFCError
-from dados.persistencia import ler_tabela_delta
 from deltalake.exceptions import TableNotFoundError
+
+from dados.persistencia import ler_tabela_delta
 
 _api_cartolafc = Api()
 

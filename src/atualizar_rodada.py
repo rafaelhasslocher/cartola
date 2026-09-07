@@ -1,6 +1,7 @@
 import argparse
 
 import deltalake
+
 from atualizar_copa import exibir_resultados_copa
 from calendario_liga import CONFRONTOS_LIGA
 from caminhos import CAMINHO_DADOS, CAMINHO_RANKING, CAMINHO_RESULTADOS
@@ -40,12 +41,14 @@ def atualizar_rodada(rodada_desejada, parcial=False):
 
     validar_cobertura(dados, IDS_TIMES, ID_NOME_TIME, [rodada_desejada])
     df = montar_dataframe_pontuacoes(dados, ID_NOME_TIME)
+    df["definitivo"] = not parcial
 
     deltalake.write_deltalake(
         CAMINHO_DADOS,
         df,
         mode="overwrite",
         predicate=f"rodada == {rodada_desejada}",
+        schema_mode="merge",
     )
 
     pontuacoes = carregar_pontuacoes(CAMINHO_DADOS)
@@ -57,10 +60,13 @@ def atualizar_rodada(rodada_desejada, parcial=False):
 
     resultados_rodada = tabela_resultados[
         tabela_resultados["rodada_brasileirao"] == rodada_desejada
-    ]
+    ].copy()
+    resultados_rodada["definitivo"] = not parcial
     salvar_resultados(CAMINHO_RESULTADOS, resultados_rodada, rodada_desejada)
 
-    df_final = montar_ranking_final(tabela_resultados, rodada_desejada)
+    df_final = montar_ranking_final(
+        tabela_resultados, rodada_desejada, definitivo=not parcial
+    )
 
     salvar_ranking(CAMINHO_RANKING, df_final, rodada_desejada)
     turno_atual = 1 if rodada_desejada <= RODADA_CORTE_TURNO else 2

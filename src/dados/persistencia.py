@@ -17,6 +17,7 @@ def salvar_ranking(caminho_ranking, df_final, rodada):
         mode="overwrite",
         partition_by=["rodada"],
         predicate=f"rodada == {rodada}",
+        schema_mode="merge",
     )
 
 
@@ -31,6 +32,7 @@ def salvar_resultados(caminho_resultados, tabela_resultados, rodada):
         mode="overwrite",
         partition_by=["rodada_brasileirao"],
         predicate=f"rodada_brasileirao == {rodada}",
+        schema_mode="merge",
     )
 
 

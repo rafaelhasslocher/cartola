@@ -61,6 +61,15 @@ def exibir_subtitulo(texto):
     st.markdown(f"<h3 style='text-align:center'>{texto}</h3>", unsafe_allow_html=True)
 
 
+def montar_rotulo_rodada(definitivos):
+    def rotulo(rodada):
+        if not definitivos.get(rodada, True):
+            return f"{rodada} - Parcial"
+        return str(rodada)
+
+    return rotulo
+
+
 st.title("Cartola - Liga e Copa")
 
 st.markdown(
@@ -81,10 +90,16 @@ with aba_liga:
     resultados = obter_resultados(CAMINHO_RESULTADOS)
 
     rodadas_disponiveis = sorted(ranking["rodada"].unique())
+    definitivos_liga = (
+        ranking.groupby("rodada")["definitivo"].first().fillna(True).to_dict()
+        if "definitivo" in ranking.columns
+        else {}
+    )
     rodada_atual = st.segmented_control(
         "Rodada",
         rodadas_disponiveis,
         default=rodadas_disponiveis[-1],
+        format_func=montar_rotulo_rodada(definitivos_liga),
         key="rodada_liga",
     )
     turno_atual = 1 if rodada_atual <= RODADA_CORTE_TURNO else 2
@@ -107,7 +122,7 @@ with aba_liga:
 
     ranking_turno = (
         ranking[(ranking["rodada"] == rodada_atual) & (ranking["turno"] == turno_atual)]
-        .drop(columns=["turno", "rodada"])
+        .drop(columns=["turno", "rodada", "definitivo"], errors="ignore")
         .sort_values(by=["pontos", "pontuacao_total"], ascending=False)
         .copy()
     )
@@ -120,10 +135,19 @@ with aba_liga:
 with aba_copa:
     pontuacoes_completas = carregar_pontuacoes(CAMINHO_DADOS)
     rodadas_disponiveis_copa = sorted(pontuacoes_completas["rodada"].unique())
+    definitivos_copa = (
+        pontuacoes_completas.groupby("rodada")["definitivo"]
+        .first()
+        .fillna(True)
+        .to_dict()
+        if "definitivo" in pontuacoes_completas.columns
+        else {}
+    )
     rodada_atual_copa = st.segmented_control(
         "Rodada",
         rodadas_disponiveis_copa,
         default=rodadas_disponiveis_copa[-1],
+        format_func=montar_rotulo_rodada(definitivos_copa),
         key="rodada_copa",
     )
     pontuacoes = pontuacoes_completas[
