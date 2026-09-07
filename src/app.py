@@ -104,7 +104,7 @@ with aba_liga:
     )
     turno_atual = 1 if rodada_atual <= RODADA_CORTE_TURNO else 2
 
-    st.header(f"Liga - rodada {rodada_atual}")
+    st.header(f"Liga - Rodada {rodada_atual}")
 
     confrontos_rodada = resultados[resultados["rodada_brasileirao"] == rodada_atual][
         ["time1", "pontuacao_time1", "pontuacao_time2", "time2"]
