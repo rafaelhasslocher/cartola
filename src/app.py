@@ -292,31 +292,35 @@ def exibir_tabela(
 
             for col_idx, valor in enumerate(linha):
                 estilo_celula = ""
-                if abs(total1 - total2) < MARGEM_EMPATE and col_idx != idx_x:
-                    # empate pela margem
+
+                if col_idx == idx_x:
+                    # força o estilo rosa SEM fundo
                     estilo_celula += (
-                        f"background-color: {COR_EMPATE}; font-weight: 700;"
+                        f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
                     )
-                elif total1 > total2:
-                    # time1 venceu
-                    if col_idx < idx_x:
+                else:
+                    if abs(total1 - total2) < MARGEM_EMPATE:
                         estilo_celula += (
-                            f"background-color: {COR_VENCEDOR}; font-weight: 700;"
+                            f"background-color: {COR_EMPATE}; font-weight: 700;"
                         )
-                    elif col_idx > idx_x:
-                        estilo_celula += (
-                            f"background-color: {COR_PERDEDOR}; font-weight: 700;"
-                        )
-                elif total2 > total1:
-                    # time2 venceu
-                    if col_idx < idx_x:
-                        estilo_celula += (
-                            f"background-color: {COR_PERDEDOR}; font-weight: 700;"
-                        )
-                    elif col_idx > idx_x:
-                        estilo_celula += (
-                            f"background-color: {COR_VENCEDOR}; font-weight: 700;"
-                        )
+                    elif total1 > total2:
+                        if col_idx < idx_x:
+                            estilo_celula += (
+                                f"background-color: {COR_VENCEDOR}; font-weight: 700;"
+                            )
+                        elif col_idx > idx_x:
+                            estilo_celula += (
+                                f"background-color: {COR_PERDEDOR}; font-weight: 700;"
+                            )
+                    elif total2 > total1:
+                        if col_idx < idx_x:
+                            estilo_celula += (
+                                f"background-color: {COR_PERDEDOR}; font-weight: 700;"
+                            )
+                        elif col_idx > idx_x:
+                            estilo_celula += (
+                                f"background-color: {COR_VENCEDOR}; font-weight: 700;"
+                            )
 
                 celulas += _celula(valor, estilo_borda_base + estilo_celula)
 
