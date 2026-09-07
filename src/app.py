@@ -87,6 +87,11 @@ LARGURA_POSICAO = "var(--largura-posicao)"
 LARGURA_TOTAL = "var(--largura-total)"
 LARGURA_JOGOS = "var(--largura-jogos)"
 
+COR_ESTATISTICAS = "#4FB0AE"
+
+COR_ESTATISTICAS_LIDER = "#5FA8D3"  # azul pastel
+COR_ESTATISTICAS_TOP3 = "#4FB0AE"  # verde-azulado (o tom atual)
+COR_ESTATISTICAS_TOP5 = "#6FBF8B"  # verde pastel
 
 CAMPEOES_LIGA = [
     ("2017/2", "Gui", "*"),
@@ -219,21 +224,68 @@ def jogos_disputados_no_turno(rodada_brasileirao_atual, turno):
     return rodada_liga_relativa(max(valores_rodada_liga), turno)
 
 
+def _classificacao_do_turno(ranking, rodada, turno):
+    """Classificação (ordenada) do turno correspondente até a rodada
+    informada (inclusive). Retorna um DataFrame vazio se não houver dados."""
+    return ranking[
+        (ranking["rodada"] == rodada) & (ranking["turno"] == turno)
+    ].sort_values(by=["pontos", "pontuacao_total"], ascending=False)
+
+
+def calcular_top_n_por_rodada(ranking, n=1):
+    """Para cada rodada do Brasileirão com dados na tabela de ranking,
+    identifica os N primeiros colocados na classificação do turno
+    correspondente até aquela rodada (inclusive). Com n=1 reproduz o
+    comportamento antigo de "líder da rodada"."""
+    ocorrencias = []
+    for rodada in sorted(ranking["rodada"].unique()):
+        turno = _turno_da_rodada_brasileirao(rodada)
+        classificacao_rodada = _classificacao_do_turno(ranking, rodada, turno)
+        if classificacao_rodada.empty:
+            continue
+        for time in classificacao_rodada.head(n)["time"]:
+            ocorrencias.append((rodada, nome_completo(time), None))
+    return ocorrencias
+
+
 def calcular_lideres_por_rodada(ranking):
     """Para cada rodada do Brasileirão com dados na tabela de ranking,
     identifica o time que ficou em 1º lugar na classificação do turno
     correspondente até aquela rodada (inclusive)."""
-    lideres = []
+    return calcular_top_n_por_rodada(ranking, n=1)
+
+
+def calcular_top_n_mas_nao_venceu(ranking, resultados, n=5):
+    """Para cada rodada, identifica os times que ficaram entre os N
+    primeiros na classificação do turno (até aquela rodada, inclusive) mas
+    que perderam ou empataram o confronto da Liga naquela mesma rodada."""
+    ocorrencias = []
     for rodada in sorted(ranking["rodada"].unique()):
         turno = _turno_da_rodada_brasileirao(rodada)
-        classificacao_rodada = ranking[
-            (ranking["rodada"] == rodada) & (ranking["turno"] == turno)
-        ].sort_values(by=["pontos", "pontuacao_total"], ascending=False)
+        classificacao_rodada = _classificacao_do_turno(ranking, rodada, turno)
         if classificacao_rodada.empty:
             continue
-        lider = classificacao_rodada.iloc[0]["time"]
-        lideres.append((rodada, nome_completo(lider), None))
-    return lideres
+
+        top_times = set(classificacao_rodada.head(n)["time"])
+        jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
+
+        for _, jogo in jogos_rodada.iterrows():
+            pares = (
+                (jogo["time1"], jogo["pontuacao_time1"], jogo["pontuacao_time2"]),
+                (jogo["time2"], jogo["pontuacao_time2"], jogo["pontuacao_time1"]),
+            )
+            for time, pontos_time, pontos_adversario in pares:
+                if time not in top_times:
+                    continue
+                diferenca = pontos_time - pontos_adversario
+                # "venceu" segue a mesma regra usada em exibir_tabela: só
+                # conta vitória se a diferença for maior que a margem de
+                # empate. Qualquer coisa fora isso é derrota ou empate.
+                perdeu_ou_empatou = diferenca < MARGEM_EMPATE
+                if perdeu_ou_empatou:
+                    ocorrencias.append((rodada, nome_completo(time), None))
+
+    return ocorrencias
 
 
 def formatar_pontuacao(valor):
@@ -1216,13 +1268,32 @@ elif aba_atual == "hist_copa":
 
 elif aba_atual == "estatisticas":
     ranking = _obter_ranking_cache(CAMINHO_RANKING, _versao_arquivo(CAMINHO_RANKING))
+    resultados = _obter_resultados_cache(
+        CAMINHO_RESULTADOS, _versao_arquivo(CAMINHO_RESULTADOS)
+    )
 
     exibir_cabecalho_secao("Estatísticas 2026", COR_ESTATISTICAS)
 
     lideres_por_rodada = calcular_lideres_por_rodada(ranking)
     exibir_ranking_titulos(
         lideres_por_rodada,
-        COR_ESTATISTICAS,
-        titulo="👑 Vezes líder da rodada",
+        COR_ESTATISTICAS_LIDER,
+        titulo="Mais vezes líder da rodada",
+        nomes_longos=True,
+    )
+
+    top3_por_rodada = calcular_top_n_por_rodada(ranking, n=3)
+    exibir_ranking_titulos(
+        top3_por_rodada,
+        COR_ESTATISTICAS_TOP3,
+        titulo="Mais vezes no Top 3 da rodada",
+        nomes_longos=True,
+    )
+
+    top5_mas_nao_venceu = calcular_top_n_mas_nao_venceu(ranking, resultados, n=5)
+    exibir_ranking_titulos(
+        top5_mas_nao_venceu,
+        COR_ESTATISTICAS_TOP5,
+        titulo="Mais vezes top 5 da rodada, mas perdeu ou empatou na Liga",
         nomes_longos=True,
     )
