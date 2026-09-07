@@ -429,9 +429,7 @@ def exibir_confrontos_liga(
     else:
         if rodadas_liga:
             rl_relativa = rodada_liga_relativa(rodadas_liga[0], turno)
-            titulo = (
-                f"Confrontos da Rodada {rl_relativa}"
-            )
+            titulo = f"Confrontos da Rodada {rl_relativa}"
         else:
             titulo = f"Confrontos da Rodada (Brasileirão {rodada_brasileirao})"
         exibir_subtitulo(titulo, cor_accent)
@@ -824,9 +822,6 @@ if aba_atual == "liga":
             .copy()
         )
         ranking_turno.insert(0, "posicao", range(1, len(ranking_turno) + 1))
-        ranking_turno.insert(
-            2, "jogos", jogos_disputados_no_turno(rodada_atual, turno_atual)
-        )
         ranking_turno["pontuacao_total"] = ranking_turno["pontuacao_total"].map(
             formatar_pontuacao
         )
@@ -834,14 +829,13 @@ if aba_atual == "liga":
         exibir_subtitulo(f"Classificação {turno_atual}º turno", COR_LIGA)
         exibir_tabela(
             ranking_turno,
-            rotulos=["Pos.", "Nome do time", "Jogos", "Pontos", "Pontuação Total"],
+            rotulos=["Pos.", "Nome do time", "Pontos", "Pontuação Total"],
             tipo_destaque="liga",
             cor_accent=COR_LIGA,
             colunas_total=["pontuacao_total"],
             larguras_colunas=[
                 LARGURA_POSICAO,
                 LARGURA_NOME_TIME,
-                LARGURA_JOGOS,
                 LARGURA_PONTOS,
                 LARGURA_TOTAL,
             ],
