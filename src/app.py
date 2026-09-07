@@ -738,23 +738,6 @@ st.markdown(
             height: 30px;
             font-size: 0.78rem;
         }}
-
-        /* Tabelas (confrontos, classificação, copa etc.): no celular, deixa
-           de forçar a largura fixa das colunas e reduz fonte/padding, para
-           a tabela encolher e caber melhor na tela. Se mesmo assim não
-           couber inteira, o scroll horizontal continua funcionando como
-           reserva, e o texto fica pequeno o bastante pra dar zoom. */
-        table {{
-            table-layout: auto !important;
-            font-size: 0.74rem !important;
-        }}
-        table col {{
-            width: auto !important;
-            min-width: 0 !important;
-        }}
-        table td, table th {{
-            padding: 6px 8px !important;
-        }}
     }}
     </style>
     """,
@@ -974,9 +957,7 @@ elif aba_atual == "copa":
 
             if TIMES_FORA_COPA:
                 exibir_subtitulo("Já classificados para as quartas", COR_COPA)
-                tabela_times_fora = pd.DataFrame(
-                    {"Nome do time": TIMES_FORA_COPA}
-                )
+                tabela_times_fora = pd.DataFrame({"Nome do time": TIMES_FORA_COPA})
                 exibir_tabela(
                     tabela_times_fora,
                     rotulos=["Time"],
