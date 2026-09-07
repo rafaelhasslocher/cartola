@@ -723,7 +723,7 @@ st.markdown(
             gap: 4px;
         }}
         .tab-item {{
-            font-size: 0.82rem;
+            font-size: 0.75rem;
             padding: 6px 8px 10px 8px;
         }}
         .tab-item.divisor {{
