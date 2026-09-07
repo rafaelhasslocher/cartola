@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+
 from calendario_copa import (
     CALENDARIOS_COPA_POR_TEMPORADA,
     CHAVE_FINAL_POR_TEMPORADA,
@@ -31,11 +32,9 @@ NOMES_FASES = {
     "final": "Final",
 }
 
-# ---------------------------------------------------------------------------
-# Paleta de cores da aplicação
-# ---------------------------------------------------------------------------
-COR_LIGA = "#D98CB3"  # rosa pastel — identidade da aba Liga
-COR_COPA = "#B39DDB"  # lilás pastel — identidade da aba Copa
+
+COR_LIGA = "#D98CB3"
+COR_COPA = "#B39DDB"
 
 COR_OURO = "rgba(255, 215, 0, 0.28)"
 COR_PRATA = "rgba(192, 192, 192, 0.24)"
@@ -43,16 +42,10 @@ COR_PRATA = "rgba(192, 192, 192, 0.24)"
 COR_VENCEDOR = "rgba(46, 204, 113, 0.20)"
 COR_PERDEDOR = "rgba(231, 76, 60, 0.16)"
 
-COR_TOTAL_TEXTO = (
-    "#1F8A56"  # verde escuro para destacar valores de total (classificado/vencedor)
-)
-COR_TOTAL_TEXTO_NEGATIVO = (
-    "#C0392B"  # vermelho escuro para valores de total de eliminados/perdedores
-)
+COR_TOTAL_TEXTO = "#1F8A56"
+COR_TOTAL_TEXTO_NEGATIVO = "#C0392B"
 
-# Largura fixa para colunas de nome de time na Liga, calculada a partir do
-# maior nome de time do calendário inteiro — garante que a tabela não mude
-# de tamanho ao trocar de rodada.
+
 _NOMES_TIMES_LIGA = {c["time1"] for c in CONFRONTOS_LIGA} | {
     c["time2"] for c in CONFRONTOS_LIGA
 }
@@ -62,10 +55,7 @@ LARGURA_X = "50px"
 LARGURA_POSICAO = "60px"
 LARGURA_TOTAL = "150px"
 
-# ---------------------------------------------------------------------------
-# Campeões de cada temporada — cada item é (temporada, campeão, observação).
-# "observação" fica None quando não há nenhuma marcação especial.
-# ---------------------------------------------------------------------------
+
 CAMPEOES_LIGA = [
     ("2017/2", "Gui", "*"),
     ("2018/1", "Rafa", None),
@@ -107,8 +97,7 @@ CAMPEOES_COPA = [
     ("2026/1", "Gui", None),
 ]
 
-# Mapeia (rodada do Brasileirão, mandante, visitante) -> rodada da Liga,
-# usado para agrupar/identificar rodadas duplas nos confrontos já ocorridos.
+
 MAPA_RODADA_LIGA = {
     (c["rodada_brasileirao"], c["time1"], c["time2"]): c["rodada_liga"]
     for c in CONFRONTOS_LIGA
@@ -145,21 +134,6 @@ def exibir_tabela(
     larguras_colunas=None,
     bordas_internas=True,
 ):
-    """Renderiza uma tabela HTML estilizada.
-
-    tipo_destaque:
-        - "liga": destaca ouro/prata nas 2 primeiras posições
-        - "copa": destaca classificados (verde) e eliminados (vermelho) no grupo
-        - "confronto_liga": destaca vencedor/perdedor de cada confronto da rodada
-        - "mata_mata": destaca vencedor/perdedor com base nos totais
-    colunas_total: nomes ORIGINAIS das colunas do df (não o rótulo exibido)
-        que devem ser destacadas em negrito/verde como "total".
-    larguras_colunas: lista opcional de larguras CSS (ex.: "220px", "12ch"),
-        uma por coluna, para manter o tamanho da tabela constante mesmo
-        quando o conteúdo (nomes de time, por exemplo) muda de tamanho.
-    bordas_internas: quando False, remove as linhas de grade entre as
-        linhas da tabela, mantendo só a borda externa.
-    """
     colunas_originais = list(df.columns)
     colunas = rotulos if rotulos is not None else colunas_originais
     colunas_total = colunas_total or []
@@ -444,7 +418,7 @@ def exibir_linha_do_tempo_titulos(titulos, cor_accent):
     st.markdown(f"<div>{itens_html}</div>", unsafe_allow_html=True)
 
     if tem_observacao:
-        st.caption("* observação especial informada junto a essa edição.")
+        st.caption("* Campeonato não premiado financeiramente.")
 
 
 def exibir_historico(titulos, cor_accent, nome_campeonato):
