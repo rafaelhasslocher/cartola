@@ -26,7 +26,7 @@ from copa.logica import (
     rodadas_disputadas,
 )
 from dados.persistencia import carregar_pontuacoes, obter_ranking, obter_resultados
-from regras_liga import MARGEM_EMPATE, RODADA_CORTE_TURNO
+from regras_liga import RODADA_CORTE_TURNO
 
 
 def _versao_arquivo(caminho):
@@ -77,13 +77,12 @@ COR_TOTAL_TEXTO_NEGATIVO = "#C0392B"
 _NOMES_TIMES_LIGA = {c["time1"] for c in CONFRONTOS_LIGA} | {
     c["time2"] for c in CONFRONTOS_LIGA
 }
-_LARGURA_NOME_TIME_BASE = f"{max(len(n) for n in _NOMES_TIMES_LIGA) + 2}ch"
-LARGURA_NOME_TIME = "var(--largura-nome-time)"
-LARGURA_PONTOS = "var(--largura-pontos)"
-LARGURA_X = "var(--largura-x)"
-LARGURA_POSICAO = "var(--largura-posicao)"
-LARGURA_TOTAL = "var(--largura-total)"
-LARGURA_JOGOS = "var(--largura-jogos)"
+LARGURA_NOME_TIME = f"{max(len(n) for n in _NOMES_TIMES_LIGA) + 2}ch"
+LARGURA_PONTOS = "90px"
+LARGURA_X = "50px"
+LARGURA_POSICAO = "60px"
+LARGURA_TOTAL = "150px"
+LARGURA_JOGOS = "70px"
 
 
 CAMPEOES_LIGA = [
@@ -192,12 +191,8 @@ def parse_pontuacao(v):
         return 0.0
 
 
-def _celula(valor, extra_estilo="", classe=""):
-    classe_attr = f" class='{classe}'" if classe else ""
-    return (
-        f"<td{classe_attr} style='text-align:center; padding: 10px 14px; "
-        f"box-sizing: border-box; {extra_estilo}'>{valor}</td>"
-    )
+def _celula(valor, extra_estilo=""):
+    return f"<td style='text-align:center; padding: 10px 14px; white-space: nowrap; box-sizing: border-box; {extra_estilo}'>{valor}</td>"
 
 
 def exibir_tabela(
@@ -284,8 +279,7 @@ def exibir_tabela(
                         f" font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
                     )
 
-                classe = "wrap-cell" if col_idx in (0, len(linha) - 1) else ""
-                celulas += _celula(valor, estilo_borda_base + estilo_celula, classe)
+                celulas += _celula(valor, estilo_borda_base + estilo_celula)
 
         elif tipo_destaque == "confronto_liga":
             idx_p1 = colunas_originais.index("pontuacao_time1")
@@ -295,18 +289,9 @@ def exibir_tabela(
             total1 = parse_pontuacao(linha[idx_p1])
             total2 = parse_pontuacao(linha[idx_p2])
 
-            total1 = parse_pontuacao(linha[idx_p1])
-            total2 = parse_pontuacao(linha[idx_p2])
-            empate = abs(total1 - total2) < MARGEM_EMPATE
-
             for col_idx, valor in enumerate(linha):
                 estilo_celula = ""
-                if empate:
-                    if col_idx != idx_x:
-                        estilo_celula += (
-                            f"background-color: {COR_EMPATE}; font-weight: 700;"
-                        )
-                elif total1 > total2:
+                if total1 > total2:
                     if col_idx < idx_x:
                         estilo_celula += (
                             f"background-color: {COR_VENCEDOR}; font-weight: 700;"
@@ -315,7 +300,7 @@ def exibir_tabela(
                         estilo_celula += (
                             f"background-color: {COR_PERDEDOR}; font-weight: 700;"
                         )
-                else:
+                elif total2 > total1:
                     if col_idx < idx_x:
                         estilo_celula += (
                             f"background-color: {COR_PERDEDOR}; font-weight: 700;"
@@ -324,12 +309,15 @@ def exibir_tabela(
                         estilo_celula += (
                             f"background-color: {COR_VENCEDOR}; font-weight: 700;"
                         )
+                elif col_idx != idx_x:
+                    estilo_celula += (
+                        f"background-color: {COR_EMPATE}; font-weight: 700;"
+                    )
                 if col_idx == idx_x:
                     estilo_celula += (
                         f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
                     )
-                classe = "wrap-cell" if col_idx in (0, len(linha) - 1) else ""
-                celulas += _celula(valor, estilo_borda_base + estilo_celula, classe)
+                celulas += _celula(valor, estilo_borda_base + estilo_celula)
 
         else:
             for col_idx, valor in enumerate(linha):
@@ -359,18 +347,12 @@ def exibir_tabela(
                     estilo_celula += (
                         f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
                     )
-                classe = (
-                    "wrap-cell"
-                    if nome_original in ("Nome do time", "time1", "time2")
-                    else ""
-                )
-                celulas += _celula(valor, estilo_borda_base + estilo_celula, classe)
                 celulas += _celula(valor, estilo_borda_base + estilo_celula)
 
         linhas += f"<tr style='{estilo_linha}'>{celulas}</tr>"
 
     st.markdown(
-        f"<div class='tabela' style='overflow-x: auto; -webkit-overflow-scrolling: touch; "
+        f"<div style='overflow-x: auto; -webkit-overflow-scrolling: touch; "
         f"margin-bottom: 10px; text-align: center; line-height: 1;'>"
         f"<div style='display: inline-block; text-align: left; border-radius: 12px; "
         f"box-shadow: 0 1px 6px rgba(0,0,0,0.10); border: 1px solid rgba(128,128,128,0.15); "
@@ -617,27 +599,16 @@ st.set_page_config(
 st.markdown(
     f"""
     <style>
-    :root {{
-        --largura-nome-time: {_LARGURA_NOME_TIME_BASE};
-        --largura-pontos: 90px;
-        --largura-x: 50px;
-        --largura-posicao: 60px;
-        --largura-total: 150px;
-        --largura-jogos: 70px;
-    }}
     .block-container {{
         padding-top: 2rem;
         padding-bottom: 2rem;
         max-width: 900px;
     }}
-    .tabela table td {{
-    white-space: nowrap;
-    }}
     h1 {{
         font-weight: 800 !important;
         letter-spacing: -0.02em;
         font-size: 2.8rem !important;
-        text-align: center; 
+        text-align: center;
         color: rgba(20, 19, 20, 0.75) !important;
     }}
 
@@ -681,6 +652,10 @@ st.markdown(
     /* divisória rosa fixa entre o grupamento da Liga e o da Copa */
     .tab-item.divisor {{
         margin-left: 36px;
+    }}
+    .tabela td, .tabela th {{
+        font-size: 0.85rem !important;
+        padding: 6px 8px !important;
     }}
     .tab-item.divisor::before {{
         content: "";
@@ -747,23 +722,6 @@ st.markdown(
        Tudo aqui fica dentro da media query, então a visualização em
        telas largas (desktop) permanece exatamente igual. */
     @media (max-width: 600px) {{
-        :root {{
-            --largura-nome-time: clamp(56px, 24vw, 100px);
-            --largura-pontos: 58px;
-            --largura-x: 32px;
-            --largura-posicao: 38px;
-            --largura-total: 96px;
-            --largura-jogos: 48px;
-        }}
-        .tabela table td.wrap-cell {{
-            white-space: normal !important;
-            word-break: break-word;
-            line-height: 1.15;
-        }}
-        .tabela table td, .tabela table th {{
-            font-size: 0.72rem !important;
-            padding: 5px 5px !important;
-        }}
         .block-container {{
             padding-left: 0.8rem;
             padding-right: 0.8rem;
@@ -1005,6 +963,11 @@ elif aba_atual == "copa":
                     tipo_destaque="copa",
                     cor_accent=COR_COPA,
                     colunas_total=["total"],
+                    larguras_colunas=(
+                        [LARGURA_NOME_TIME]
+                        + [LARGURA_PONTOS] * n_jogos
+                        + [LARGURA_TOTAL]
+                    ),
                 )
 
             if TIMES_FORA_COPA:
@@ -1014,6 +977,7 @@ elif aba_atual == "copa":
                     tabela_times_fora,
                     rotulos=["Time"],
                     cor_accent=COR_COPA,
+                    larguras_colunas=[LARGURA_NOME_TIME],
                 )
 
         else:
@@ -1089,6 +1053,13 @@ elif aba_atual == "copa":
                 rotulos=rotulos,
                 tipo_destaque="mata_mata",
                 cor_accent=COR_COPA,
+                larguras_colunas=(
+                    [LARGURA_NOME_TIME]
+                    + [LARGURA_PONTOS] * n_jogos
+                    + [LARGURA_TOTAL, LARGURA_X, LARGURA_TOTAL]
+                    + [LARGURA_PONTOS] * n_jogos
+                    + [LARGURA_NOME_TIME]
+                ),
             )
 
 elif aba_atual == "hist_copa":
