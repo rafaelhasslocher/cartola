@@ -81,6 +81,7 @@ LARGURA_PONTOS = "90px"
 LARGURA_X = "50px"
 LARGURA_POSICAO = "60px"
 LARGURA_TOTAL = "150px"
+LARGURA_JOGOS = "70px"
 
 
 CAMPEOES_LIGA = [
@@ -129,6 +130,48 @@ MAPA_RODADA_LIGA = {
     (c["rodada_brasileirao"], c["time1"], c["time2"]): c["rodada_liga"]
     for c in CONFRONTOS_LIGA
 }
+
+
+def _turno_da_rodada_brasileirao(rodada_brasileirao):
+    return 1 if rodada_brasileirao <= RODADA_CORTE_TURNO else 2
+
+
+def _construir_offsets_rodada_liga_por_turno():
+    """A rodada_liga em CONFRONTOS_LIGA é uma contagem acumulada desde o
+    início do campeonato (não reinicia no 2º turno). Aqui calculamos, para
+    cada turno, o quanto subtrair dela para obter a numeração relativa ao
+    turno (que sempre começa em 1)."""
+    minimo_por_turno = {}
+    for c in CONFRONTOS_LIGA:
+        turno = _turno_da_rodada_brasileirao(c["rodada_brasileirao"])
+        minimo_atual = minimo_por_turno.get(turno)
+        if minimo_atual is None or c["rodada_liga"] < minimo_atual:
+            minimo_por_turno[turno] = c["rodada_liga"]
+    return {turno: minimo - 1 for turno, minimo in minimo_por_turno.items()}
+
+
+_OFFSET_RODADA_LIGA_POR_TURNO = _construir_offsets_rodada_liga_por_turno()
+
+
+def rodada_liga_relativa(rodada_liga, turno):
+    """Converte a rodada_liga (numeração acumulada desde o início do
+    campeonato) para a numeração relativa ao turno, que reinicia em 1 a
+    cada novo turno."""
+    return rodada_liga - _OFFSET_RODADA_LIGA_POR_TURNO.get(turno, 0)
+
+
+def jogos_disputados_no_turno(rodada_brasileirao_atual, turno):
+    """Quantidade de rodadas da Liga já disputadas no turno informado, até a
+    rodada do Brasileirão selecionada (inclusive)."""
+    valores_rodada_liga = [
+        c["rodada_liga"]
+        for c in CONFRONTOS_LIGA
+        if _turno_da_rodada_brasileirao(c["rodada_brasileirao"]) == turno
+        and c["rodada_brasileirao"] <= rodada_brasileirao_atual
+    ]
+    if not valores_rodada_liga:
+        return 0
+    return rodada_liga_relativa(max(valores_rodada_liga), turno)
 
 
 def formatar_pontuacao(valor):
@@ -338,10 +381,14 @@ def exibir_cabecalho_secao(texto, cor_accent):
     )
 
 
-def exibir_confrontos_liga(df_confrontos, cor_accent, com_pontuacao):
-    """Exibe a tabela de confrontos da Liga. Se houver mais de uma rodada da
-    Liga dentro da rodada do Brasileirão selecionada (rodada dupla), separa
-    em uma tabela por rodada da Liga, cada uma com seu próprio título."""
+def exibir_confrontos_liga(
+    df_confrontos, cor_accent, com_pontuacao, rodada_brasileirao, turno
+):
+    """Exibe a tabela de confrontos da Liga. O título mostra a rodada da Liga
+    já relativa ao turno (reiniciando em 1 a cada turno) junto da rodada do
+    Brasileirão correspondente. Se houver mais de uma rodada da Liga dentro
+    da rodada do Brasileirão selecionada (rodada dupla), separa em uma
+    tabela por rodada da Liga, cada uma com seu próprio título."""
     if com_pontuacao:
         rotulos = ["Mandante", "Pontos", "", "Pontos", "Visitante"]
         larguras = [
@@ -363,7 +410,11 @@ def exibir_confrontos_liga(df_confrontos, cor_accent, com_pontuacao):
 
     if len(rodadas_liga) > 1:
         for rl in rodadas_liga:
-            exibir_subtitulo(f"Rodada da Liga {rl} - Confrontos", cor_accent)
+            rl_relativa = rodada_liga_relativa(rl, turno)
+            exibir_subtitulo(
+                f"Confrontos da Rodada {rl_relativa}",
+                cor_accent,
+            )
             subset = df_confrontos[df_confrontos["rodada_liga"] == rl].drop(
                 columns=["rodada_liga"]
             )
@@ -376,7 +427,14 @@ def exibir_confrontos_liga(df_confrontos, cor_accent, com_pontuacao):
                 bordas_internas=False,
             )
     else:
-        exibir_subtitulo("Confrontos da rodada", cor_accent)
+        if rodadas_liga:
+            rl_relativa = rodada_liga_relativa(rodadas_liga[0], turno)
+            titulo = (
+                f"Confrontos da Rodada {rl_relativa}"
+            )
+        else:
+            titulo = f"Confrontos da Rodada (Brasileirão {rodada_brasileirao})"
+        exibir_subtitulo(titulo, cor_accent)
         subset = df_confrontos.drop(columns=["rodada_liga"], errors="ignore")
         exibir_tabela(
             subset,
@@ -726,10 +784,9 @@ if aba_atual == "liga":
     )
 
     rodada_ja_ocorreu = rodada_atual in rodadas_jogadas
+    turno_atual = _turno_da_rodada_brasileirao(rodada_atual)
 
     if rodada_ja_ocorreu:
-        turno_atual = 1 if rodada_atual <= RODADA_CORTE_TURNO else 2
-
         exibir_cabecalho_secao(f"Liga — Rodada {rodada_atual}", COR_LIGA)
 
         confrontos_rodada = resultados[
@@ -749,7 +806,13 @@ if aba_atual == "liga":
             formatar_pontuacao
         )
 
-        exibir_confrontos_liga(confrontos_rodada, COR_LIGA, com_pontuacao=True)
+        exibir_confrontos_liga(
+            confrontos_rodada,
+            COR_LIGA,
+            com_pontuacao=True,
+            rodada_brasileirao=rodada_atual,
+            turno=turno_atual,
+        )
 
         ranking_turno = (
             ranking[
@@ -761,6 +824,9 @@ if aba_atual == "liga":
             .copy()
         )
         ranking_turno.insert(0, "posicao", range(1, len(ranking_turno) + 1))
+        ranking_turno.insert(
+            2, "jogos", jogos_disputados_no_turno(rodada_atual, turno_atual)
+        )
         ranking_turno["pontuacao_total"] = ranking_turno["pontuacao_total"].map(
             formatar_pontuacao
         )
@@ -768,13 +834,14 @@ if aba_atual == "liga":
         exibir_subtitulo(f"Classificação {turno_atual}º turno", COR_LIGA)
         exibir_tabela(
             ranking_turno,
-            rotulos=["Pos.", "Nome do time", "Pontos", "Pontuação Total"],
+            rotulos=["Pos.", "Nome do time", "Jogos", "Pontos", "Pontuação Total"],
             tipo_destaque="liga",
             cor_accent=COR_LIGA,
             colunas_total=["pontuacao_total"],
             larguras_colunas=[
                 LARGURA_POSICAO,
                 LARGURA_NOME_TIME,
+                LARGURA_JOGOS,
                 LARGURA_PONTOS,
                 LARGURA_TOTAL,
             ],
@@ -798,10 +865,18 @@ if aba_atual == "liga":
         )
 
         if confrontos_futuros.empty:
-            exibir_subtitulo("Confrontos da rodada", COR_LIGA)
+            exibir_subtitulo(
+                f"Confrontos da Rodada (Brasileirão {rodada_atual})", COR_LIGA
+            )
             st.info("Não há confrontos cadastrados para essa rodada.")
         else:
-            exibir_confrontos_liga(confrontos_futuros, COR_LIGA, com_pontuacao=False)
+            exibir_confrontos_liga(
+                confrontos_futuros,
+                COR_LIGA,
+                com_pontuacao=False,
+                rodada_brasileirao=rodada_atual,
+                turno=turno_atual,
+            )
             st.caption("A classificação aparece aqui assim que a rodada acontecer.")
 
 elif aba_atual == "hist_liga":
