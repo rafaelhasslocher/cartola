@@ -63,6 +63,7 @@ NOMES_FASES = {
 
 COR_LIGA = "#D98CB3"
 COR_COPA = "#B39DDB"
+COR_ESTATISTICAS = "#4FB0AE"
 
 COR_OURO = "rgba(255, 215, 0, 0.28)"
 COR_PRATA = "rgba(192, 192, 192, 0.24)"
@@ -216,6 +217,23 @@ def jogos_disputados_no_turno(rodada_brasileirao_atual, turno):
     if not valores_rodada_liga:
         return 0
     return rodada_liga_relativa(max(valores_rodada_liga), turno)
+
+
+def calcular_lideres_por_rodada(ranking):
+    """Para cada rodada do Brasileirão com dados na tabela de ranking,
+    identifica o time que ficou em 1º lugar na classificação do turno
+    correspondente até aquela rodada (inclusive)."""
+    lideres = []
+    for rodada in sorted(ranking["rodada"].unique()):
+        turno = _turno_da_rodada_brasileirao(rodada)
+        classificacao_rodada = ranking[
+            (ranking["rodada"] == rodada) & (ranking["turno"] == turno)
+        ].sort_values(by=["pontos", "pontuacao_total"], ascending=False)
+        if classificacao_rodada.empty:
+            continue
+        lider = classificacao_rodada.iloc[0]["time"]
+        lideres.append((rodada, nome_completo(lider), None))
+    return lideres
 
 
 def formatar_pontuacao(valor):
@@ -521,21 +539,23 @@ ABAS = [
     ("hist_liga", "📜 Histórico Liga", "liga"),
     ("copa", "🥇 Copa", "copa"),
     ("hist_copa", "📜 Histórico Copa", "copa"),
+    ("estatisticas", "📊 Estatísticas 2026", "estatisticas"),
 ]
 
 
 def exibir_navegacao_abas(aba_atual):
     """Barra de abas 100% própria (HTML/CSS puro), com uma divisória rosa
-    fixa entre o grupamento da Liga e o da Copa. Não depende de nenhuma
-    classe interna do Streamlit/BaseWeb, então o visual não pode "quebrar"
-    por causa de mudanças de versão."""
+    fixa entre cada grupamento (Liga, Copa e Estatísticas). Não depende de
+    nenhuma classe interna do Streamlit/BaseWeb, então o visual não pode
+    "quebrar" por causa de mudanças de versão."""
     itens_html = ""
     for chave, rotulo, grupo in ABAS:
         classes = "tab-item"
         if chave == aba_atual:
             classes += f" ativa grupo-{grupo}"
-        if chave == "copa":
+        if chave in ("copa", "estatisticas"):
             classes += " divisor"
+            itens_html += "<span class='tab-break'></span>"
         href = construir_href(aba=chave)
         itens_html += f"<a class='{classes}' href='{href}' target='_self'>{rotulo}</a>"
     st.markdown(f"<div class='tab-nav'>{itens_html}</div>", unsafe_allow_html=True)
@@ -570,14 +590,34 @@ def exibir_seletor_rodada(
     )
 
 
-def exibir_ranking_titulos(titulos, cor_accent):
-    """Mini painel com o número de títulos por campeão, em forma de barras."""
+def exibir_ranking_titulos(
+    titulos, cor_accent, titulo="🏅 Maiores campeões", nomes_longos=False
+):
+    """Mini painel com o número de títulos por campeão, em forma de barras.
+    Quando `nomes_longos` é True (caso de nomes de time por extenso, bem
+    maiores que o nome de um jogador), a coluna do nome usa uma largura
+    responsiva (--largura-nome-ranking-longo) e quebra em mais de uma
+    linha em vez de cortar com reticências."""
     contagem = {}
     for _, campeao, _ in titulos:
         contagem[campeao] = contagem.get(campeao, 0) + 1
 
     ranking_ordenado = sorted(contagem.items(), key=lambda item: (-item[1], item[0]))
     maior_qtd = ranking_ordenado[0][1] if ranking_ordenado else 1
+
+    if nomes_longos:
+        estilo_nome = (
+            "width:var(--largura-nome-ranking-longo); font-weight:700; "
+            "font-size:0.92rem; white-space:normal; overflow:visible; "
+            "word-break:break-word; line-height:1.2;"
+        )
+        largura_qtd = "26px"
+    else:
+        estilo_nome = (
+            "width:100px; font-weight:700; font-size:0.92rem; "
+            "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+        )
+        largura_qtd = "22px"
 
     linhas_html = ""
     for posicao, (nome, qtd) in enumerate(ranking_ordenado):
@@ -586,13 +626,12 @@ def exibir_ranking_titulos(titulos, cor_accent):
         linhas_html += (
             "<div style='display:flex; align-items:center; gap:10px; margin-bottom:9px;'>"
             f"<div style='width:22px; text-align:center; font-size:1rem;'>{medalha}</div>"
-            f"<div style='width:100px; font-weight:700; font-size:0.92rem; "
-            f"white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>{nome}</div>"
+            f"<div style='{estilo_nome}'>{nome}</div>"
             "<div style='flex:1; background:rgba(128,128,128,0.12); border-radius:6px; height:16px; overflow:hidden;'>"
             f"<div style='width:{largura_barra}%; height:100%; "
             f"background:linear-gradient(90deg, {cor_accent}, {cor_accent}AA); border-radius:6px;'></div>"
             "</div>"
-            f"<div style='width:22px; text-align:right; font-weight:800; color:{cor_accent}; font-size:0.95rem;'>{qtd}</div>"
+            f"<div style='width:{largura_qtd}; text-align:right; font-weight:800; color:{cor_accent}; font-size:0.95rem;'>{qtd}</div>"
             "</div>"
         )
 
@@ -600,7 +639,7 @@ def exibir_ranking_titulos(titulos, cor_accent):
         "<div style='padding:16px 20px; border-radius:14px; margin-bottom:22px; "
         f"background:{cor_accent}14; border:1px solid {cor_accent}40;'>"
         "<div style='font-weight:800; font-size:1rem; margin-bottom:14px; color:rgba(60,60,60,0.9);'>"
-        "🏅 Maiores campeões</div>"
+        f"{titulo}</div>"
         f"{linhas_html}</div>",
         unsafe_allow_html=True,
     )
@@ -662,6 +701,7 @@ st.markdown(
         --largura-posicao: 60px;
         --largura-total: 150px;
         --largura-jogos: 70px;
+        --largura-nome-ranking-longo: 210px;
     }}
     .block-container {{
         padding-top: 2rem;
@@ -713,9 +753,19 @@ st.markdown(
         color: {COR_COPA};
         border-bottom-color: {COR_COPA};
     }}
-    /* divisória rosa fixa entre o grupamento da Liga e o da Copa */
+    .tab-item.ativa.grupo-estatisticas {{
+        color: {COR_ESTATISTICAS};
+        border-bottom-color: {COR_ESTATISTICAS};
+    }}
+    /* divisória rosa fixa entre cada grupamento (Liga, Copa, Estatísticas) */
     .tab-item.divisor {{
         margin-left: 36px;
+    }}
+    /* em telas largas os grupos ficam lado a lado; esse elemento só entra
+       em ação na media query do celular, forçando cada grupo a começar em
+       uma nova linha (quebra "por grupo", não no meio de um deles) */
+    .tab-break {{
+        display: none;
     }}
     .tabela table td {{
         white-space: nowrap;
@@ -796,6 +846,7 @@ st.markdown(
             --largura-posicao: 38px;
             --largura-total: 96px;
             --largura-jogos: 48px;
+            --largura-nome-ranking-longo: clamp(108px, 42vw, 170px);
         }}
         .tabela table td, .tabela table th {{
             font-size: 0.72rem !important;
@@ -825,6 +876,10 @@ st.markdown(
         }}
         .tab-item.divisor::before {{
             left: -11px;
+        }}
+        .tab-break {{
+            flex-basis: 100%;
+            height: 0;
         }}
         .rodada-pill {{
             flex: 0 0 38px;
@@ -1155,3 +1210,16 @@ elif aba_atual == "copa":
 
 elif aba_atual == "hist_copa":
     exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa", TIMES_CAMPEOES_COPA)
+
+elif aba_atual == "estatisticas":
+    ranking = _obter_ranking_cache(CAMINHO_RANKING, _versao_arquivo(CAMINHO_RANKING))
+
+    exibir_cabecalho_secao("Estatísticas 2026", COR_ESTATISTICAS)
+
+    lideres_por_rodada = calcular_lideres_por_rodada(ranking)
+    exibir_ranking_titulos(
+        lideres_por_rodada,
+        COR_ESTATISTICAS,
+        titulo="👑 Mais vezes líder da rodada",
+        nomes_longos=True,
+    )
