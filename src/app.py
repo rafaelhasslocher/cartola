@@ -38,21 +38,75 @@ def formatar_pontuacao(valor):
     return texto.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def exibir_tabela(df, rotulos=None):
+def exibir_tabela(df, rotulos=None, tipo_destaque=None, qtd_classificados=3):
     colunas = rotulos if rotulos is not None else list(df.columns)
+
     cabecalho = "".join(
-        f"<th style='text-align:center; white-space:nowrap'>{coluna}</th>"
+        f"<th style='text-align:center; padding: 12px; border-bottom: 2px solid rgba(128, 128, 128, 0.4); opacity: 0.8;'>{coluna}</th>"
         for coluna in colunas
     )
-    linhas = "".join(
-        "<tr>"
-        + "".join(f"<td style='text-align:center'>{valor}</td>" for valor in linha)
-        + "</tr>"
-        for linha in df.itertuples(index=False)
-    )
+
+    linhas = ""
+    for i, linha in enumerate(df.itertuples(index=False)):
+        estilo_linha = "border-bottom: 1px solid rgba(128, 128, 128, 0.15);"
+        celulas = ""
+
+        if tipo_destaque == "liga":
+            if i == 0:
+                estilo_linha += (
+                    " background-color: rgba(255, 215, 0, 0.20); font-weight: bold;"
+                )
+            elif i == 1:
+                estilo_linha += " background-color: rgba(255, 215, 0, 0.05);"
+        elif tipo_destaque == "copa" and i < qtd_classificados:
+            estilo_linha += " background-color: rgba(46, 204, 113, 0.15);"
+
+        if tipo_destaque == "mata_mata":
+            n_jogos = (len(linha) - 5) // 2
+            idx_total1 = n_jogos + 1
+            idx_sep = n_jogos + 2
+            idx_total2 = n_jogos + 3
+
+            def parse_pontuacao(v):
+                if not v or str(v).strip() == "":
+                    return 0.0
+                try:
+                    return float(str(v).replace(".", "").replace(",", "."))
+                except:
+                    return 0.0
+
+            total1 = parse_pontuacao(linha[idx_total1])
+            total2 = parse_pontuacao(linha[idx_total2])
+
+            cor_vencedor = "rgba(46, 204, 113, 0.15)"
+            cor_perdedor = "rgba(231, 76, 60, 0.15)"
+
+            for col_idx, valor in enumerate(linha):
+                estilo_celula = "text-align:center; padding: 10px;"
+
+                if total1 > total2:
+                    if col_idx < idx_sep:
+                        estilo_celula += f" background-color: {cor_vencedor};"
+                    elif col_idx > idx_sep:
+                        estilo_celula += f" background-color: {cor_perdedor};"
+                elif total2 > total1:
+                    if col_idx < idx_sep:
+                        estilo_celula += f" background-color: {cor_perdedor};"
+                    elif col_idx > idx_sep:
+                        estilo_celula += f" background-color: {cor_vencedor};"
+
+                celulas += f"<td style='{estilo_celula}'>{valor}</td>"
+        else:
+            for valor in linha:
+                celulas += f"<td style='text-align:center; padding: 10px;'>{valor}</td>"
+
+        linhas += f"<tr style='{estilo_linha}'>{celulas}</tr>"
+
     st.markdown(
-        f"<table style='margin-left:auto; margin-right:auto'>"
-        f"<thead><tr>{cabecalho}</tr></thead><tbody>{linhas}</tbody></table>",
+        f"<div style='overflow-x: auto; margin-bottom: 32px; border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 8px;'>"
+        f"<table style='width: 100%; border-collapse: collapse;'>"
+        f"<thead><tr>{cabecalho}</tr></thead>"
+        f"<tbody>{linhas}</tbody></table></div>",
         unsafe_allow_html=True,
     )
 
@@ -75,8 +129,19 @@ st.title("Cartola - Liga e Copa")
 st.markdown(
     """
     <style>
-    .stTable table td, .stTable table th {
-        text-align: center !important;
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+        margin-bottom: 16px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-weight: 600;
+        padding-bottom: 8px;
+    }
+    h3 {
+        color: rgba(128, 128, 128, 0.9);
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-size: 1.3rem !important;
     }
     </style>
     """,
@@ -130,7 +195,11 @@ with aba_liga:
         formatar_pontuacao
     )
     exibir_subtitulo(f"Classificação {turno_atual}º turno")
-    exibir_tabela(ranking_turno, rotulos=["Nome do time", "Pontos", "Pontuação Total"])
+    exibir_tabela(
+        ranking_turno,
+        rotulos=["Nome do time", "Pontos", "Pontuação Total"],
+        tipo_destaque="liga",
+    )
 
 with aba_copa:
     pontuacoes_completas = carregar_pontuacoes(CAMINHO_DADOS)
@@ -192,7 +261,7 @@ with aba_copa:
                     + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
                     + ["Total"]
                 )
-                exibir_tabela(tabela_grupo, rotulos=rotulos)
+                exibir_tabela(tabela_grupo, rotulos=rotulos, tipo_destaque="copa")
 
         else:
             classificados_grupos = definir_classificados_fase_de_grupos(
@@ -262,4 +331,4 @@ with aba_copa:
                 + [f"{i}° Jogo" for i in range(n_jogos, 0, -1)]
                 + ["Time"]
             )
-            exibir_tabela(tabela_mata_mata, rotulos=rotulos)
+            exibir_tabela(tabela_mata_mata, rotulos=rotulos, tipo_destaque="mata_mata")
