@@ -1,3 +1,5 @@
+import os
+import time
 from urllib.parse import urlencode
 
 import pandas as pd
@@ -25,6 +27,29 @@ from copa.logica import (
 )
 from dados.persistencia import carregar_pontuacoes, obter_ranking, obter_resultados
 from regras_liga import RODADA_CORTE_TURNO
+
+
+def _versao_arquivo(caminho):
+    try:
+        return os.path.getmtime(caminho)
+    except (OSError, TypeError):
+        return int(time.time() // 30)
+
+
+@st.cache_data(show_spinner=False)
+def _obter_ranking_cache(caminho, _versao):
+    return obter_ranking(caminho)
+
+
+@st.cache_data(show_spinner=False)
+def _obter_resultados_cache(caminho, _versao):
+    return obter_resultados(caminho)
+
+
+@st.cache_data(show_spinner=False)
+def _carregar_pontuacoes_cache(caminho, _versao):
+    return carregar_pontuacoes(caminho)
+
 
 NOMES_GRUPOS = {"grupo_a": "Grupo 1", "grupo_b": "Grupo 2"}
 NOMES_FASES = {
@@ -279,9 +304,11 @@ def exibir_tabela(
         linhas += f"<tr style='{estilo_linha}'>{celulas}</tr>"
 
     st.markdown(
-        f"<div style='overflow-x: auto; margin-bottom: 10px; display: flex; justify-content: center; line-height: 1;'>"
-        f"<div style='border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.10); "
-        f"border: 1px solid rgba(128,128,128,0.15); overflow: hidden; line-height: normal;'>"
+        f"<div style='overflow-x: auto; -webkit-overflow-scrolling: touch; "
+        f"margin-bottom: 10px; text-align: center; line-height: 1;'>"
+        f"<div style='display: inline-block; text-align: left; border-radius: 12px; "
+        f"box-shadow: 0 1px 6px rgba(0,0,0,0.10); border: 1px solid rgba(128,128,128,0.15); "
+        f"overflow: hidden; line-height: normal;'>"
         f"<table style='border-collapse: collapse; margin: 0;{' table-layout: fixed;' if larguras_colunas else ''}'>"
         f"{colgroup}"
         f"<thead><tr style='background: linear-gradient(90deg, {cor_accent}, {cor_accent}CC);'>"
@@ -624,6 +651,38 @@ st.markdown(
     .rodada-pill.parcial.ativa {{
         box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.85);
     }}
+
+    /* ---------- Ajustes só para telas estreitas (celular) ----------
+       Tudo aqui fica dentro da media query, então a visualização em
+       telas largas (desktop) permanece exatamente igual. */
+    @media (max-width: 600px) {{
+        .block-container {{
+            padding-left: 0.8rem;
+            padding-right: 0.8rem;
+        }}
+        h1 {{
+            font-size: 1.9rem !important;
+        }}
+        .tab-nav {{
+            gap: 4px;
+        }}
+        .tab-item {{
+            font-size: 0.82rem;
+            padding: 6px 8px 10px 8px;
+        }}
+        .tab-item.divisor {{
+            margin-left: 18px;
+        }}
+        .tab-item.divisor::before {{
+            left: -11px;
+        }}
+        .rodada-pill {{
+            flex: 0 0 38px;
+            width: 38px;
+            height: 30px;
+            font-size: 0.78rem;
+        }}
+    }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -638,8 +697,10 @@ if aba_atual not in {chave for chave, _, _ in ABAS}:
 exibir_navegacao_abas(aba_atual)
 
 if aba_atual == "liga":
-    ranking = obter_ranking(CAMINHO_RANKING)
-    resultados = obter_resultados(CAMINHO_RESULTADOS)
+    ranking = _obter_ranking_cache(CAMINHO_RANKING, _versao_arquivo(CAMINHO_RANKING))
+    resultados = _obter_resultados_cache(
+        CAMINHO_RESULTADOS, _versao_arquivo(CAMINHO_RESULTADOS)
+    )
 
     rodadas_jogadas = sorted(ranking["rodada"].unique())
     rodadas_calendario = sorted({c["rodada_brasileirao"] for c in CONFRONTOS_LIGA})
@@ -747,7 +808,9 @@ elif aba_atual == "hist_liga":
     exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga")
 
 elif aba_atual == "copa":
-    pontuacoes_completas = carregar_pontuacoes(CAMINHO_DADOS)
+    pontuacoes_completas = _carregar_pontuacoes_cache(
+        CAMINHO_DADOS, _versao_arquivo(CAMINHO_DADOS)
+    )
     rodadas_disponiveis_copa = sorted(pontuacoes_completas["rodada"].unique())
     definitivos_copa = (
         pontuacoes_completas.groupby("rodada")["definitivo"]
