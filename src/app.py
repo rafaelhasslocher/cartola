@@ -129,9 +129,9 @@ CAMPEOES_COPA = [
 ]
 
 TIMES_CAMPEOES_LIGA = {
-    "2017/2": "?",
+    "2017/2": "Cocorocococo FC e amigos do bairro",
     "2018/1": "CAIO JÚNIOR F.C. ®️",
-    "2018/2": "?",
+    "2018/2": "Cocorocococo FC e amigos do bairro",
     "2019/1": "CAIO JÚNIOR F.C. ®️",
     "2019/2": "Pombo Manco SC",
     "2020/1": "CAIO JÚNIOR F.C. ®️",
@@ -151,7 +151,7 @@ TIMES_CAMPEOES_LIGA = {
 
 TIMES_CAMPEOES_COPA = {
     "2018/1": "Kyrolina FC",
-    "2018/2": "?",
+    "2018/2": "Cocorocococo FC e amigos do bairro",
     "2019/1": "Pombo Manco SC",
     "2019/2": "Pombo Manco SC",
     "2020/1": "Kyrolina FC",
