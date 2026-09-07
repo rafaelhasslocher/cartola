@@ -54,10 +54,10 @@ def exibir_tabela(df, rotulos=None, tipo_destaque=None, qtd_classificados=3):
         if tipo_destaque == "liga":
             if i == 0:
                 estilo_linha += (
-                    " background-color: rgba(255, 215, 0, 0.20); font-weight: bold;"
+                    " background-color: rgba(255, 215, 0, 0.7); font-weight: bold;"
                 )
             elif i == 1:
-                estilo_linha += " background-color: rgba(255, 215, 0, 0.05);"
+                estilo_linha += " background-color: rgba(192, 192, 192, 0.6);"
         elif tipo_destaque == "copa" and i < qtd_classificados:
             estilo_linha += " background-color: rgba(46, 204, 113, 0.15);"
 
