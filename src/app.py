@@ -974,7 +974,9 @@ elif aba_atual == "copa":
 
             if TIMES_FORA_COPA:
                 exibir_subtitulo("Já classificados para as quartas", COR_COPA)
-                tabela_times_fora = pd.DataFrame({"Nome do time": TIMES_FORA_COPA})
+                tabela_times_fora = pd.DataFrame(
+                    {"Nome do time": TIMES_FORA_COPA}
+                )
                 exibir_tabela(
                     tabela_times_fora,
                     rotulos=["Time"],
