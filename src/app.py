@@ -553,9 +553,10 @@ def exibir_navegacao_abas(aba_atual):
         classes = "tab-item"
         if chave == aba_atual:
             classes += f" ativa grupo-{grupo}"
-        if chave in ("copa", "estatisticas"):
+        if chave == "copa":
             classes += " divisor"
-            itens_html += "<span class='tab-break'></span>"
+        if chave == "estatisticas":
+            classes += " divisor divisor-estatisticas"
         href = construir_href(aba=chave)
         itens_html += f"<a class='{classes}' href='{href}' target='_self'>{rotulo}</a>"
     st.markdown(f"<div class='tab-nav'>{itens_html}</div>", unsafe_allow_html=True)
@@ -761,12 +762,6 @@ st.markdown(
     .tab-item.divisor {{
         margin-left: 36px;
     }}
-    /* em telas largas os grupos ficam lado a lado; esse elemento só entra
-       em ação na media query do celular, forçando cada grupo a começar em
-       uma nova linha (quebra "por grupo", não no meio de um deles) */
-    .tab-break {{
-        display: none;
-    }}
     .tabela table td {{
         white-space: nowrap;
     }}
@@ -877,9 +872,17 @@ st.markdown(
         .tab-item.divisor::before {{
             left: -11px;
         }}
-        .tab-break {{
-            flex-basis: 100%;
-            height: 0;
+        /* no celular a "Estatísticas 2026" costuma sobrar sozinha na
+           última linha (as outras quatro abas cabem na primeira); nesse
+           caso não faz sentido nem a divisória rosa (não há mais nada
+           colado nela) nem deixá-la grudada à esquerda, então ela ganha
+           margem automática dos dois lados para ficar centralizada na
+           própria linha, e a divisória é escondida. */
+        .tab-item.divisor-estatisticas {{
+            margin: 0 auto;
+        }}
+        .tab-item.divisor-estatisticas::before {{
+            display: none;
         }}
         .rodada-pill {{
             flex: 0 0 38px;
@@ -1220,6 +1223,6 @@ elif aba_atual == "estatisticas":
     exibir_ranking_titulos(
         lideres_por_rodada,
         COR_ESTATISTICAS,
-        titulo="👑 Mais vezes líder da rodada",
+        titulo="👑 Vezes líder da rodada",
         nomes_longos=True,
     )
