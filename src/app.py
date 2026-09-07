@@ -30,6 +30,20 @@ NOMES_FASES = {
     "final": "Final",
 }
 
+# ---------------------------------------------------------------------------
+# Paleta de cores da aplicação
+# ---------------------------------------------------------------------------
+COR_LIGA = "#D98CB3"  # rosa pastel — identidade da aba Liga
+COR_COPA = "#B39DDB"  # lilás pastel — identidade da aba Copa
+
+COR_OURO = "rgba(255, 215, 0, 0.28)"
+COR_PRATA = "rgba(192, 192, 192, 0.24)"
+
+COR_VENCEDOR = "rgba(46, 204, 113, 0.20)"
+COR_PERDEDOR = "rgba(231, 76, 60, 0.16)"
+
+COR_TOTAL_TEXTO = "#1F8A56"  # verde escuro para destacar valores de total
+
 
 def formatar_pontuacao(valor):
     if valor is None:
@@ -38,28 +52,62 @@ def formatar_pontuacao(valor):
     return texto.replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def exibir_tabela(df, rotulos=None, tipo_destaque=None, qtd_classificados=3):
-    colunas = rotulos if rotulos is not None else list(df.columns)
+def parse_pontuacao(v):
+    if not v or str(v).strip() == "":
+        return 0.0
+    try:
+        return float(str(v).replace(".", "").replace(",", "."))
+    except Exception:
+        return 0.0
+
+
+def _celula(valor, extra_estilo=""):
+    return f"<td style='text-align:center; padding: 10px 14px; white-space: nowrap; {extra_estilo}'>{valor}</td>"
+
+
+def exibir_tabela(
+    df,
+    rotulos=None,
+    tipo_destaque=None,
+    qtd_classificados=3,
+    cor_accent=COR_LIGA,
+    colunas_total=None,
+):
+    """Renderiza uma tabela HTML estilizada, com largura ajustada ao conteúdo.
+
+    tipo_destaque:
+        - "liga": destaca ouro/prata nas 2 primeiras posições
+        - "copa": destaca classificados (verde) e eliminados (vermelho) no grupo
+        - "confronto_liga": destaca vencedor/perdedor de cada confronto da rodada
+        - "mata_mata": destaca vencedor/perdedor com base nos totais
+    colunas_total: nomes ORIGINAIS das colunas do df (não o rótulo exibido)
+        que devem ser destacadas em negrito/verde como "total".
+    """
+    colunas_originais = list(df.columns)
+    colunas = rotulos if rotulos is not None else colunas_originais
+    colunas_total = colunas_total or []
 
     cabecalho = "".join(
-        f"<th style='text-align:center; padding: 12px; border-bottom: 2px solid rgba(128, 128, 128, 0.4); opacity: 0.8;'>{coluna}</th>"
+        f"<th style='text-align:center; padding: 12px 14px; color: white; "
+        f"white-space: nowrap; font-weight: 600; letter-spacing: 0.02em; font-size: 0.9rem;'>{coluna}</th>"
         for coluna in colunas
     )
 
     linhas = ""
     for i, linha in enumerate(df.itertuples(index=False)):
-        estilo_linha = "border-bottom: 1px solid rgba(128, 128, 128, 0.15);"
+        estilo_linha = "border-bottom: 1px solid rgba(128, 128, 128, 0.15); transition: background-color 0.15s;"
         celulas = ""
 
         if tipo_destaque == "liga":
             if i == 0:
-                estilo_linha += (
-                    " background-color: rgba(255, 215, 0, 0.7); font-weight: bold;"
-                )
+                estilo_linha += f" background-color: {COR_OURO}; font-weight: 600;"
             elif i == 1:
-                estilo_linha += " background-color: rgba(192, 192, 192, 0.6);"
-        elif tipo_destaque == "copa" and i < qtd_classificados:
-            estilo_linha += " background-color: rgba(46, 204, 113, 0.15);"
+                estilo_linha += f" background-color: {COR_PRATA}; font-weight: 600;"
+        elif tipo_destaque == "copa":
+            if i < qtd_classificados:
+                estilo_linha += f" background-color: {COR_VENCEDOR};"
+            else:
+                estilo_linha += f" background-color: {COR_PERDEDOR};"
 
         if tipo_destaque == "mata_mata":
             n_jogos = (len(linha) - 5) // 2
@@ -67,52 +115,104 @@ def exibir_tabela(df, rotulos=None, tipo_destaque=None, qtd_classificados=3):
             idx_sep = n_jogos + 2
             idx_total2 = n_jogos + 3
 
-            def parse_pontuacao(v):
-                if not v or str(v).strip() == "":
-                    return 0.0
-                try:
-                    return float(str(v).replace(".", "").replace(",", "."))
-                except:
-                    return 0.0
-
             total1 = parse_pontuacao(linha[idx_total1])
             total2 = parse_pontuacao(linha[idx_total2])
 
-            cor_vencedor = "rgba(46, 204, 113, 0.15)"
-            cor_perdedor = "rgba(231, 76, 60, 0.15)"
-
             for col_idx, valor in enumerate(linha):
-                estilo_celula = "text-align:center; padding: 10px;"
+                estilo_celula = ""
 
                 if total1 > total2:
                     if col_idx < idx_sep:
-                        estilo_celula += f" background-color: {cor_vencedor};"
+                        estilo_celula += f"background-color: {COR_VENCEDOR};"
                     elif col_idx > idx_sep:
-                        estilo_celula += f" background-color: {cor_perdedor};"
+                        estilo_celula += f"background-color: {COR_PERDEDOR};"
                 elif total2 > total1:
                     if col_idx < idx_sep:
-                        estilo_celula += f" background-color: {cor_perdedor};"
+                        estilo_celula += f"background-color: {COR_PERDEDOR};"
                     elif col_idx > idx_sep:
-                        estilo_celula += f" background-color: {cor_vencedor};"
+                        estilo_celula += f"background-color: {COR_VENCEDOR};"
 
-                celulas += f"<td style='{estilo_celula}'>{valor}</td>"
+                if col_idx in (idx_total1, idx_total2):
+                    estilo_celula += f" font-weight: 700; color: {COR_TOTAL_TEXTO}; font-size: 1.02rem;"
+                if col_idx == idx_sep:
+                    estilo_celula += (
+                        f" font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
+                    )
+
+                celulas += _celula(valor, estilo_celula)
+
+        elif tipo_destaque == "confronto_liga":
+            idx_p1 = colunas_originais.index("pontuacao_time1")
+            idx_x = colunas_originais.index("x")
+            idx_p2 = colunas_originais.index("pontuacao_time2")
+
+            total1 = parse_pontuacao(linha[idx_p1])
+            total2 = parse_pontuacao(linha[idx_p2])
+
+            for col_idx, valor in enumerate(linha):
+                estilo_celula = ""
+                if total1 > total2:
+                    if col_idx < idx_x:
+                        estilo_celula += f"background-color: {COR_VENCEDOR};"
+                    elif col_idx > idx_x:
+                        estilo_celula += f"background-color: {COR_PERDEDOR};"
+                elif total2 > total1:
+                    if col_idx < idx_x:
+                        estilo_celula += f"background-color: {COR_PERDEDOR};"
+                    elif col_idx > idx_x:
+                        estilo_celula += f"background-color: {COR_VENCEDOR};"
+                if col_idx == idx_x:
+                    estilo_celula += (
+                        f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
+                    )
+                celulas += _celula(valor, estilo_celula)
+
         else:
-            for valor in linha:
-                celulas += f"<td style='text-align:center; padding: 10px;'>{valor}</td>"
+            for col_idx, valor in enumerate(linha):
+                estilo_celula = ""
+                nome_original = (
+                    colunas_originais[col_idx]
+                    if col_idx < len(colunas_originais)
+                    else None
+                )
+                if nome_original in colunas_total:
+                    estilo_celula += f"font-weight: 700; color: {COR_TOTAL_TEXTO}; font-size: 1.02rem;"
+                if nome_original == "posicao":
+                    estilo_celula += " font-weight: 700; opacity: 0.75;"
+                celulas += _celula(valor, estilo_celula)
 
         linhas += f"<tr style='{estilo_linha}'>{celulas}</tr>"
 
     st.markdown(
-        f"<div style='overflow-x: auto; margin-bottom: 32px; border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 8px;'>"
-        f"<table style='width: 100%; border-collapse: collapse;'>"
-        f"<thead><tr>{cabecalho}</tr></thead>"
-        f"<tbody>{linhas}</tbody></table></div>",
+        f"<div style='overflow-x: auto; margin-bottom: 10px; display: flex; justify-content: center; line-height: 1;'>"
+        f"<div style='border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.10); "
+        f"border: 1px solid rgba(128,128,128,0.15); overflow: hidden; line-height: normal;'>"
+        f"<table style='border-collapse: collapse; margin: 0;'>"
+        f"<thead><tr style='background: linear-gradient(90deg, {cor_accent}, {cor_accent}CC);'>"
+        f"{cabecalho}</tr></thead>"
+        f"<tbody>{linhas}</tbody></table></div></div>",
         unsafe_allow_html=True,
     )
 
 
-def exibir_subtitulo(texto):
-    st.markdown(f"<h3 style='text-align:center'>{texto}</h3>", unsafe_allow_html=True)
+def exibir_subtitulo(texto, cor_accent=COR_LIGA):
+    st.markdown(
+        f"<div style='display:flex; align-items:center; justify-content:center; gap:10px; margin: 18px 0 8px 0;'>"
+        f"<div style='width:5px; height:20px; border-radius:3px; background:{cor_accent};'></div>"
+        f"<h3 style='margin:0; font-size:1.1rem; font-weight:700; color: rgba(70,70,70,0.95);'>"
+        f"{texto}</h3></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def exibir_cabecalho_secao(texto, cor_accent):
+    st.markdown(
+        f"<div style='padding: 10px 18px; border-radius: 12px; margin-bottom: 12px; "
+        f"background: linear-gradient(90deg, {cor_accent}22, transparent); "
+        f"border-left: 5px solid {cor_accent};'>"
+        f"<span style='font-size:1.25rem; font-weight:800;'>{texto}</span></div>",
+        unsafe_allow_html=True,
+    )
 
 
 def montar_rotulo_rodada(definitivos):
@@ -124,31 +224,51 @@ def montar_rotulo_rodada(definitivos):
     return rotulo
 
 
-st.title("Cartola - Liga e Copa")
+st.set_page_config(
+    page_title="Cartola Djamba Feipa - 2026",
+    page_icon="⚽",
+    layout="centered",
+)
 
 st.markdown(
-    """
+    f"""
     <style>
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-        margin-bottom: 16px;
-    }
-    .stTabs [data-baseweb="tab"] {
+    .block-container {{
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 900px;
+    }}
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 36px;
+        margin-bottom: 14px;
+        border-bottom: 2px solid rgba(128, 128, 128, 0.15);
+        justify-content: center;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        font-weight: 800;
+        font-size: 1.3rem;
+        padding: 6px 4px 10px 4px;
+    }}
+    .stTabs [aria-selected="true"] {{
+        color: {COR_LIGA} !important;
+    }}
+    div[role="radiogroup"] label, .stSegmentedControl label {{
         font-weight: 600;
-        padding-bottom: 8px;
-    }
-    h3 {
-        color: rgba(128, 128, 128, 0.9);
-        margin-top: 24px;
-        margin-bottom: 16px;
-        font-size: 1.3rem !important;
-    }
+    }}
+    h1 {{
+        font-weight: 800 !important;
+        letter-spacing: -0.02em;
+        font-size: 1.8rem !important;
+        text-align: center;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-aba_liga, aba_copa = st.tabs(["Liga", "Copa"])
+st.title("⚽ Cartola Djamba Feipa - 2026")
+
+aba_liga, aba_copa = st.tabs(["🏆 Liga", "🥇 Copa"])
 
 with aba_liga:
     ranking = obter_ranking(CAMINHO_RANKING)
@@ -169,36 +289,46 @@ with aba_liga:
     )
     turno_atual = 1 if rodada_atual <= RODADA_CORTE_TURNO else 2
 
-    st.header(f"Liga - Rodada {rodada_atual}")
+    exibir_cabecalho_secao(f"Liga — Rodada {rodada_atual}", COR_LIGA)
 
     confrontos_rodada = resultados[resultados["rodada_brasileirao"] == rodada_atual][
         ["time1", "pontuacao_time1", "pontuacao_time2", "time2"]
     ].copy()
+    confrontos_rodada.insert(2, "x", "x")
     confrontos_rodada["pontuacao_time1"] = confrontos_rodada["pontuacao_time1"].map(
         formatar_pontuacao
     )
     confrontos_rodada["pontuacao_time2"] = confrontos_rodada["pontuacao_time2"].map(
         formatar_pontuacao
     )
-    exibir_subtitulo("Confrontos da rodada")
+
+    exibir_subtitulo("Confrontos da rodada", COR_LIGA)
     exibir_tabela(
-        confrontos_rodada, rotulos=["Mandante", "Pontos", "Pontos", "Visitante"]
+        confrontos_rodada,
+        rotulos=["Mandante", "Pontos", "", "Pontos", "Visitante"],
+        tipo_destaque="confronto_liga",
+        cor_accent=COR_LIGA,
     )
 
     ranking_turno = (
         ranking[(ranking["rodada"] == rodada_atual) & (ranking["turno"] == turno_atual)]
         .drop(columns=["turno", "rodada", "definitivo"], errors="ignore")
         .sort_values(by=["pontos", "pontuacao_total"], ascending=False)
+        .reset_index(drop=True)
         .copy()
     )
+    ranking_turno.insert(0, "posicao", range(1, len(ranking_turno) + 1))
     ranking_turno["pontuacao_total"] = ranking_turno["pontuacao_total"].map(
         formatar_pontuacao
     )
-    exibir_subtitulo(f"Classificação {turno_atual}º turno")
+
+    exibir_subtitulo(f"Classificação {turno_atual}º turno", COR_LIGA)
     exibir_tabela(
         ranking_turno,
-        rotulos=["Nome do time", "Pontos", "Pontuação Total"],
+        rotulos=["Pos.", "Nome do time", "Pontos", "Pontuação Total"],
         tipo_destaque="liga",
+        cor_accent=COR_LIGA,
+        colunas_total=["pontuacao_total"],
     )
 
 with aba_copa:
@@ -228,7 +358,7 @@ with aba_copa:
     )
 
     if temporada_atual is None:
-        st.write("Copa ainda não começou.")
+        st.info("Copa ainda não começou.")
     else:
         GRUPOS_COPA = GRUPOS_COPA_POR_TEMPORADA[temporada_atual]
         TIMES_FORA_COPA = TIMES_FORA_POR_TEMPORADA[temporada_atual]
@@ -242,11 +372,13 @@ with aba_copa:
         RODADAS_SEMI = calendario_copa["semi"]
         RODADAS_FINAL = calendario_copa["final"]
 
-        st.header(f"Copa - {NOMES_FASES.get(fase_atual, fase_atual)}")
+        exibir_cabecalho_secao(
+            f"Copa — {NOMES_FASES.get(fase_atual, fase_atual)}", COR_COPA
+        )
 
         if fase_atual == "fase_de_grupos":
             for nome_grupo, times_grupo in GRUPOS_COPA.items():
-                exibir_subtitulo(NOMES_GRUPOS.get(nome_grupo, nome_grupo))
+                exibir_subtitulo(NOMES_GRUPOS.get(nome_grupo, nome_grupo), COR_COPA)
                 tabela_grupo = montar_tabela_jogo_a_jogo_grupo(
                     pontuacoes, times_grupo, RODADAS_FASE_DE_GRUPOS
                 )
@@ -261,7 +393,13 @@ with aba_copa:
                     + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
                     + ["Total"]
                 )
-                exibir_tabela(tabela_grupo, rotulos=rotulos, tipo_destaque="copa")
+                exibir_tabela(
+                    tabela_grupo,
+                    rotulos=rotulos,
+                    tipo_destaque="copa",
+                    cor_accent=COR_COPA,
+                    colunas_total=["total"],
+                )
 
         else:
             classificados_grupos = definir_classificados_fase_de_grupos(
@@ -327,8 +465,13 @@ with aba_copa:
             rotulos = (
                 ["Time"]
                 + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
-                + ["Total", "x", "Total"]
+                + ["Total", "", "Total"]
                 + [f"{i}° Jogo" for i in range(n_jogos, 0, -1)]
                 + ["Time"]
             )
-            exibir_tabela(tabela_mata_mata, rotulos=rotulos, tipo_destaque="mata_mata")
+            exibir_tabela(
+                tabela_mata_mata,
+                rotulos=rotulos,
+                tipo_destaque="mata_mata",
+                cor_accent=COR_COPA,
+            )
