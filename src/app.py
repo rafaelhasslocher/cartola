@@ -232,43 +232,52 @@ def _classificacao_do_turno(ranking, rodada, turno):
     ].sort_values(by=["pontos", "pontuacao_total"], ascending=False)
 
 
-def calcular_top_n_por_rodada(ranking, n=1):
-    """Para cada rodada do Brasileirão com dados na tabela de ranking,
-    identifica os N primeiros colocados na classificação do turno
-    correspondente até aquela rodada (inclusive). Com n=1 reproduz o
-    comportamento antigo de "líder da rodada"."""
+def _pontuacoes_dos_times_na_rodada(resultados, rodada):
+    """Pontuação bruta de cada um dos 12 times na rodada do Brasileirão
+    informada (independente de vitória/derrota no confronto direto)."""
+    jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
+    pontuacoes = {}
+    for _, jogo in jogos_rodada.iterrows():
+        pontuacoes[jogo["time1"]] = jogo["pontuacao_time1"]
+        pontuacoes[jogo["time2"]] = jogo["pontuacao_time2"]
+    return pontuacoes
+
+
+def calcular_top_n_por_rodada(resultados, n=1):
+    """Para cada rodada do Brasileirão, ordena os 12 times pela pontuação
+    bruta que fizeram naquela rodada (não pela classificação acumulada da
+    Liga) e retorna os N primeiros. Com n=1 dá o maior pontuador da rodada."""
     ocorrencias = []
-    for rodada in sorted(ranking["rodada"].unique()):
-        turno = _turno_da_rodada_brasileirao(rodada)
-        classificacao_rodada = _classificacao_do_turno(ranking, rodada, turno)
-        if classificacao_rodada.empty:
+    for rodada in sorted(resultados["rodada_brasileirao"].unique()):
+        pontuacoes_rodada = _pontuacoes_dos_times_na_rodada(resultados, rodada)
+        if not pontuacoes_rodada:
             continue
-        for time in classificacao_rodada.head(n)["time"]:
+        ordenado = sorted(pontuacoes_rodada.items(), key=lambda item: -item[1])
+        for time, _ in ordenado[:n]:
             ocorrencias.append((rodada, nome_completo(time), None))
     return ocorrencias
 
 
-def calcular_lideres_por_rodada(ranking):
-    """Para cada rodada do Brasileirão com dados na tabela de ranking,
-    identifica o time que ficou em 1º lugar na classificação do turno
-    correspondente até aquela rodada (inclusive)."""
-    return calcular_top_n_por_rodada(ranking, n=1)
+def calcular_lideres_por_rodada(resultados):
+    """Para cada rodada do Brasileirão, identifica o time que fez a maior
+    pontuação bruta naquela rodada."""
+    return calcular_top_n_por_rodada(resultados, n=1)
 
 
-def calcular_top_n_mas_nao_venceu(ranking, resultados, n=5):
+def calcular_top_n_mas_nao_venceu(resultados, n=5):
     """Para cada rodada, identifica os times que ficaram entre os N
-    primeiros na classificação do turno (até aquela rodada, inclusive) mas
-    que perderam ou empataram o confronto da Liga naquela mesma rodada."""
+    maiores pontuadores brutos daquela rodada, mas que perderam ou
+    empataram o confronto direto da Liga na mesma rodada."""
     ocorrencias = []
-    for rodada in sorted(ranking["rodada"].unique()):
-        turno = _turno_da_rodada_brasileirao(rodada)
-        classificacao_rodada = _classificacao_do_turno(ranking, rodada, turno)
-        if classificacao_rodada.empty:
+    for rodada in sorted(resultados["rodada_brasileirao"].unique()):
+        pontuacoes_rodada = _pontuacoes_dos_times_na_rodada(resultados, rodada)
+        if not pontuacoes_rodada:
             continue
 
-        top_times = set(classificacao_rodada.head(n)["time"])
-        jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
+        ordenado = sorted(pontuacoes_rodada.items(), key=lambda item: -item[1])
+        top_times = {time for time, _ in ordenado[:n]}
 
+        jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
         for _, jogo in jogos_rodada.iterrows():
             pares = (
                 (jogo["time1"], jogo["pontuacao_time1"], jogo["pontuacao_time2"]),
@@ -278,9 +287,6 @@ def calcular_top_n_mas_nao_venceu(ranking, resultados, n=5):
                 if time not in top_times:
                     continue
                 diferenca = pontos_time - pontos_adversario
-                # "venceu" segue a mesma regra usada em exibir_tabela: só
-                # conta vitória se a diferença for maior que a margem de
-                # empate. Qualquer coisa fora isso é derrota ou empate.
                 perdeu_ou_empatou = diferenca < MARGEM_EMPATE
                 if perdeu_ou_empatou:
                     ocorrencias.append((rodada, nome_completo(time), None))
@@ -1274,15 +1280,15 @@ elif aba_atual == "estatisticas":
 
     exibir_cabecalho_secao("Estatísticas 2026", COR_ESTATISTICAS)
 
-    lideres_por_rodada = calcular_lideres_por_rodada(ranking)
+    lideres_por_rodada = calcular_lideres_por_rodada(resultados)
     exibir_ranking_titulos(
         lideres_por_rodada,
         COR_ESTATISTICAS_LIDER,
-        titulo="Mais vezes líder da rodada",
+        titulo="Mais vezes maior pontuador da rodada",
         nomes_longos=True,
     )
 
-    top3_por_rodada = calcular_top_n_por_rodada(ranking, n=3)
+    top3_por_rodada = calcular_top_n_por_rodada(resultados, n=3)
     exibir_ranking_titulos(
         top3_por_rodada,
         COR_ESTATISTICAS_TOP3,
@@ -1290,7 +1296,7 @@ elif aba_atual == "estatisticas":
         nomes_longos=True,
     )
 
-    top5_mas_nao_venceu = calcular_top_n_mas_nao_venceu(ranking, resultados, n=5)
+    top5_mas_nao_venceu = calcular_top_n_mas_nao_venceu(resultados, n=5)
     exibir_ranking_titulos(
         top5_mas_nao_venceu,
         COR_ESTATISTICAS_TOP5,
