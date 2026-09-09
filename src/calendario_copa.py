@@ -64,10 +64,10 @@ CHAVE_QUARTAS_POR_TEMPORADA = {
         ("3_grupo_a", "3_grupo_b"),
     ],
     2: [
-        ("1_grupo_a", "3_grupo_b"),
-        ("1_grupo_b", "3_grupo_a"),
-        ("fora_1", "2_grupo_b"),
-        ("fora_2", "2_grupo_a"),
+        ("1_grupo_a", "2_grupo_b"),
+        ("1_grupo_b", "2_grupo_a"),
+        ("fora_1", "3_grupo_a"),
+        ("fora_2", "3_grupo_b"),
     ],
 }
 

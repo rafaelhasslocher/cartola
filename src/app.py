@@ -18,6 +18,7 @@ from caminhos import CAMINHO_DADOS, CAMINHO_RANKING, CAMINHO_RESULTADOS
 from copa.logica import (
     definir_classificados_fase_de_grupos,
     determinar_temporada_e_fase_atual_copa,
+    fase_esta_definida,
     montar_confrontos_iniciais,
     montar_confrontos_por_indice,
     montar_fase_mata_mata,
@@ -89,9 +90,10 @@ LARGURA_JOGOS = "var(--largura-jogos)"
 
 COR_ESTATISTICAS = "#4FB0AE"
 
-COR_ESTATISTICAS_LIDER = "#5FA8D3"  # azul pastel
-COR_ESTATISTICAS_TOP3 = "#4FB0AE"  # verde-azulado (o tom atual)
-COR_ESTATISTICAS_TOP5 = "#6FBF8B"  # verde pastel
+COR_ESTATISTICAS_LIDER = "#5FA8D3"
+COR_ESTATISTICAS_TOP3 = "#4FB0AE"
+COR_ESTATISTICAS_TOP5 = "#6FBF8B"
+COR_ESTATISTICAS_EMPATE_LIDER = "#7EC8E3"
 
 CAMPEOES_LIGA = [
     ("2017/2", "Gui", "*"),
@@ -180,6 +182,17 @@ MAPA_RODADA_LIGA = {
     (c["rodada_brasileirao"], c["time1"], c["time2"]): c["rodada_liga"]
     for c in CONFRONTOS_LIGA
 }
+
+PRIMEIRA_RODADA_COPA = min(
+    fase.start
+    for calendario in CALENDARIOS_COPA_POR_TEMPORADA.values()
+    for fase in calendario.values()
+)
+ULTIMA_RODADA_COPA = max(
+    fase.stop - 1
+    for calendario in CALENDARIOS_COPA_POR_TEMPORADA.values()
+    for fase in calendario.values()
+)
 
 
 def _turno_da_rodada_brasileirao(rodada_brasileirao):
@@ -289,6 +302,35 @@ def calcular_top_n_mas_nao_venceu(resultados, n=5):
                 diferenca = pontos_time - pontos_adversario
                 perdeu_ou_empatou = diferenca < MARGEM_EMPATE
                 if perdeu_ou_empatou:
+                    ocorrencias.append((rodada, nome_completo(time), None))
+
+    return ocorrencias
+
+
+def calcular_maior_pontuador_mas_empatou(resultados):
+    """Para cada rodada do Brasileirão, identifica o time que fez a maior
+    pontuação bruta daquela rodada e verifica se ele empatou (e não
+    perdeu) o confronto direto da Liga na mesma rodada."""
+    ocorrencias = []
+    for rodada in sorted(resultados["rodada_brasileirao"].unique()):
+        pontuacoes_rodada = _pontuacoes_dos_times_na_rodada(resultados, rodada)
+        if not pontuacoes_rodada:
+            continue
+
+        ordenado = sorted(pontuacoes_rodada.items(), key=lambda item: -item[1])
+        maior_pontuador = ordenado[0][0]
+
+        jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
+        for _, jogo in jogos_rodada.iterrows():
+            pares = (
+                (jogo["time1"], jogo["pontuacao_time1"], jogo["pontuacao_time2"]),
+                (jogo["time2"], jogo["pontuacao_time2"], jogo["pontuacao_time1"]),
+            )
+            for time, pontos_time, pontos_adversario in pares:
+                if time != maior_pontuador:
+                    continue
+                empatou = abs(pontos_time - pontos_adversario) < MARGEM_EMPATE
+                if empatou:
                     ocorrencias.append((rodada, nome_completo(time), None))
 
     return ocorrencias
@@ -745,6 +787,102 @@ def exibir_historico(titulos, cor_accent, nome_campeonato, times_por_temporada=N
     exibir_linha_do_tempo_titulos(titulos, cor_accent, times_por_temporada)
 
 
+def _resolver_confrontos_fase_copa(
+    fase_atual,
+    pontuacoes,
+    rodada_atual_copa,
+    rodada_maxima_disputada_copa,
+    grupos_copa,
+    times_fora_copa,
+    chave_quartas,
+    chave_semi,
+    chave_final,
+    rodadas_fase_de_grupos,
+    rodadas_quartas,
+    rodadas_semi,
+    rodadas_final,
+):
+    """Monta o chaveamento da fase mata-mata da Copa solicitada
+    (quartas/semi/final), a partir dos classificados da fase de grupos e do
+    chaveamento definido em calendario_copa.py.
+
+    Uma fase só pode ser montada quando a fase anterior já está de fato
+    definida (`fase_esta_definida`), o que é calculado com base na última
+    rodada que realmente já tem pontuação registrada
+    (`rodada_maxima_disputada_copa`), e não com base na rodada que está
+    sendo visualizada no momento (que pode ser uma rodada futura). Quando
+    isso ainda não é possível, retorna uma mensagem explicando o motivo em
+    vez do chaveamento.
+    """
+    definitivo_grupos = fase_esta_definida(
+        rodada_maxima_disputada_copa, rodadas_fase_de_grupos
+    )
+    classificados_grupos = definir_classificados_fase_de_grupos(
+        pontuacoes,
+        grupos_copa,
+        rodadas_disputadas(rodadas_fase_de_grupos, rodada_atual_copa),
+        definitivo_grupos,
+    )
+    try:
+        confrontos_quartas = montar_confrontos_iniciais(
+            chave_quartas, classificados_grupos, times_fora_copa
+        )
+    except ValueError:
+        return (
+            None,
+            None,
+            (
+                "A fase de grupos ainda não terminou — o chaveamento das "
+                "quartas de final será exibido assim que ela for definida."
+            ),
+        )
+
+    if fase_atual == "quartas":
+        return confrontos_quartas, rodadas_quartas, None
+
+    definitivo_quartas = fase_esta_definida(
+        rodada_maxima_disputada_copa, rodadas_quartas
+    )
+    _, vencedores_quartas = montar_fase_mata_mata(
+        pontuacoes,
+        confrontos_quartas,
+        rodadas_disputadas(rodadas_quartas, rodada_atual_copa),
+        definitivo_quartas,
+    )
+    if vencedores_quartas is None:
+        return (
+            None,
+            None,
+            (
+                "As quartas de final ainda não terminaram — o chaveamento da "
+                "semifinal será exibido assim que elas forem definidas."
+            ),
+        )
+    confrontos_semi = montar_confrontos_por_indice(chave_semi, vencedores_quartas)
+
+    if fase_atual == "semi":
+        return confrontos_semi, rodadas_semi, None
+
+    definitivo_semi = fase_esta_definida(rodada_maxima_disputada_copa, rodadas_semi)
+    _, vencedores_semi = montar_fase_mata_mata(
+        pontuacoes,
+        confrontos_semi,
+        rodadas_disputadas(rodadas_semi, rodada_atual_copa),
+        definitivo_semi,
+    )
+    if vencedores_semi is None:
+        return (
+            None,
+            None,
+            (
+                "A semifinal ainda não terminou — o chaveamento da final será "
+                "exibido assim que ela for definida."
+            ),
+        )
+    confrontos_final = montar_confrontos_por_indice(chave_final, vencedores_semi)
+    return confrontos_final, rodadas_final, None
+
+
 st.set_page_config(
     page_title="Cartola Djamba Feipa - 2026",
     layout="centered",
@@ -1093,7 +1231,13 @@ elif aba_atual == "copa":
     pontuacoes_completas = _carregar_pontuacoes_cache(
         CAMINHO_DADOS, _versao_arquivo(CAMINHO_DADOS)
     )
-    rodadas_disponiveis_copa = sorted(pontuacoes_completas["rodada"].unique())
+    rodadas_jogadas_copa = sorted(pontuacoes_completas["rodada"].unique())
+    rodada_maxima_disputada_copa = (
+        rodadas_jogadas_copa[-1] if rodadas_jogadas_copa else 0
+    )
+    rodadas_disponiveis_copa = sorted(
+        set(rodadas_jogadas_copa) | set(range(1, ULTIMA_RODADA_COPA + 1))
+    )
     definitivos_copa = (
         pontuacoes_completas.groupby("rodada")["definitivo"]
         .first()
@@ -1102,7 +1246,11 @@ elif aba_atual == "copa":
         if "definitivo" in pontuacoes_completas.columns
         else {}
     )
-    rodada_default_copa = rodadas_disponiveis_copa[-1]
+    rodada_default_copa = (
+        rodada_maxima_disputada_copa
+        if rodada_maxima_disputada_copa
+        else rodadas_disponiveis_copa[0]
+    )
     rodada_atual_copa = obter_param_int("rodada_copa", rodada_default_copa)
     if rodada_atual_copa not in rodadas_disponiveis_copa:
         rodada_atual_copa = rodada_default_copa
@@ -1125,7 +1273,11 @@ elif aba_atual == "copa":
     )
 
     if temporada_atual is None:
-        st.info("Copa ainda não começou.")
+        exibir_cabecalho_secao(f"Copa — Rodada {rodada_atual_copa}", COR_COPA)
+        if rodada_atual_copa < PRIMEIRA_RODADA_COPA:
+            st.info("Copa ainda não começou.")
+        else:
+            st.info("Não há confronto de Copa nesta rodada.")
     else:
         GRUPOS_COPA = GRUPOS_COPA_POR_TEMPORADA[temporada_atual]
         TIMES_FORA_COPA = TIMES_FORA_POR_TEMPORADA[temporada_atual]
@@ -1149,6 +1301,7 @@ elif aba_atual == "copa":
                 tabela_grupo = montar_tabela_jogo_a_jogo_grupo(
                     pontuacoes, times_grupo, RODADAS_FASE_DE_GRUPOS
                 )
+                tabela_grupo.insert(0, "posicao", range(1, len(tabela_grupo) + 1))
                 tabela_grupo["time"] = tabela_grupo["time"].map(nome_completo)
                 n_jogos = len(list(RODADAS_FASE_DE_GRUPOS))
                 for i in range(1, n_jogos + 1):
@@ -1157,7 +1310,7 @@ elif aba_atual == "copa":
                     )
                 tabela_grupo["total"] = tabela_grupo["total"].map(formatar_pontuacao)
                 rotulos = (
-                    ["Nome do time"]
+                    ["Pos.", "Nome do time"]
                     + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
                     + ["Total"]
                 )
@@ -1168,7 +1321,7 @@ elif aba_atual == "copa":
                     cor_accent=COR_COPA,
                     colunas_total=["total"],
                     larguras_colunas=(
-                        [LARGURA_NOME_TIME]
+                        [LARGURA_POSICAO, LARGURA_NOME_TIME]
                         + [LARGURA_JOGOS] * n_jogos
                         + [LARGURA_TOTAL]
                     ),
@@ -1186,88 +1339,70 @@ elif aba_atual == "copa":
                     larguras_colunas=[LARGURA_NOME_TIME],
                 )
         else:
-            classificados_grupos = definir_classificados_fase_de_grupos(
-                pontuacoes,
-                GRUPOS_COPA,
-                rodadas_disputadas(RODADAS_FASE_DE_GRUPOS, rodada_atual_copa),
-                True,
-            )
-            confrontos_quartas = montar_confrontos_iniciais(
-                CHAVE_QUARTAS_COPA, classificados_grupos, TIMES_FORA_COPA
+            confrontos_fase, rodadas_fase, motivo_bloqueio = (
+                _resolver_confrontos_fase_copa(
+                    fase_atual=fase_atual,
+                    pontuacoes=pontuacoes,
+                    rodada_atual_copa=rodada_atual_copa,
+                    rodada_maxima_disputada_copa=rodada_maxima_disputada_copa,
+                    grupos_copa=GRUPOS_COPA,
+                    times_fora_copa=TIMES_FORA_COPA,
+                    chave_quartas=CHAVE_QUARTAS_COPA,
+                    chave_semi=CHAVE_SEMI_COPA,
+                    chave_final=CHAVE_FINAL_COPA,
+                    rodadas_fase_de_grupos=RODADAS_FASE_DE_GRUPOS,
+                    rodadas_quartas=RODADAS_QUARTAS,
+                    rodadas_semi=RODADAS_SEMI,
+                    rodadas_final=RODADAS_FINAL,
+                )
             )
 
-            if fase_atual == "quartas":
-                confrontos_fase = confrontos_quartas
-                rodadas_fase = RODADAS_QUARTAS
+            if motivo_bloqueio:
+                st.info(motivo_bloqueio)
             else:
-                _, vencedores_quartas = montar_fase_mata_mata(
-                    pontuacoes,
-                    confrontos_quartas,
-                    rodadas_disputadas(RODADAS_QUARTAS, rodada_atual_copa),
-                    True,
+                tabela_mata_mata = montar_tabela_jogo_a_jogo_mata_mata(
+                    pontuacoes, confrontos_fase, rodadas_fase
                 )
-                confrontos_semi = montar_confrontos_por_indice(
-                    CHAVE_SEMI_COPA, vencedores_quartas
-                )
-
-                if fase_atual == "semi":
-                    confrontos_fase = confrontos_semi
-                    rodadas_fase = RODADAS_SEMI
-                else:
-                    _, vencedores_semi = montar_fase_mata_mata(
-                        pontuacoes,
-                        confrontos_semi,
-                        rodadas_disputadas(RODADAS_SEMI, rodada_atual_copa),
-                        True,
+                tabela_mata_mata["time1"] = tabela_mata_mata["time1"].map(nome_completo)
+                tabela_mata_mata["time2"] = tabela_mata_mata["time2"].map(nome_completo)
+                n_jogos = len(list(rodadas_fase))
+                colunas_time1 = [f"jogo_{i}_time1" for i in range(1, n_jogos + 1)]
+                colunas_time2 = [f"jogo_{i}_time2" for i in range(1, n_jogos + 1)]
+                for coluna in (
+                    colunas_time1 + ["total_time1"] + colunas_time2 + ["total_time2"]
+                ):
+                    tabela_mata_mata[coluna] = tabela_mata_mata[coluna].map(
+                        formatar_pontuacao
                     )
-                    confrontos_fase = montar_confrontos_por_indice(
-                        CHAVE_FINAL_COPA, vencedores_semi
-                    )
-                    rodadas_fase = RODADAS_FINAL
 
-            tabela_mata_mata = montar_tabela_jogo_a_jogo_mata_mata(
-                pontuacoes, confrontos_fase, rodadas_fase
-            )
-            tabela_mata_mata["time1"] = tabela_mata_mata["time1"].map(nome_completo)
-            tabela_mata_mata["time2"] = tabela_mata_mata["time2"].map(nome_completo)
-            n_jogos = len(list(rodadas_fase))
-            colunas_time1 = [f"jogo_{i}_time1" for i in range(1, n_jogos + 1)]
-            colunas_time2 = [f"jogo_{i}_time2" for i in range(1, n_jogos + 1)]
-            for coluna in (
-                colunas_time1 + ["total_time1"] + colunas_time2 + ["total_time2"]
-            ):
-                tabela_mata_mata[coluna] = tabela_mata_mata[coluna].map(
-                    formatar_pontuacao
+                colunas_ordem = (
+                    ["time1"]
+                    + colunas_time1
+                    + ["total_time1", "sep", "total_time2"]
+                    + list(reversed(colunas_time2))
+                    + ["time2"]
                 )
-
-            colunas_ordem = (
-                ["time1"]
-                + colunas_time1
-                + ["total_time1", "sep", "total_time2"]
-                + list(reversed(colunas_time2))
-                + ["time2"]
-            )
-            tabela_mata_mata = tabela_mata_mata[colunas_ordem]
-            rotulos = (
-                ["Time"]
-                + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
-                + ["Total", "", "Total"]
-                + [f"{i}° Jogo" for i in range(n_jogos, 0, -1)]
-                + ["Time"]
-            )
-            exibir_tabela(
-                tabela_mata_mata,
-                rotulos=rotulos,
-                tipo_destaque="mata_mata",
-                cor_accent=COR_COPA,
-                larguras_colunas=(
-                    [LARGURA_NOME_TIME]
-                    + [LARGURA_JOGOS] * n_jogos
-                    + [LARGURA_TOTAL, LARGURA_X, LARGURA_TOTAL]
-                    + [LARGURA_JOGOS] * n_jogos
-                    + [LARGURA_NOME_TIME]
-                ),
-            )
+                tabela_mata_mata = tabela_mata_mata[colunas_ordem]
+                rotulos = (
+                    ["Time"]
+                    + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
+                    + ["Total", "", "Total"]
+                    + [f"{i}° Jogo" for i in range(n_jogos, 0, -1)]
+                    + ["Time"]
+                )
+                exibir_tabela(
+                    tabela_mata_mata,
+                    rotulos=rotulos,
+                    tipo_destaque="mata_mata",
+                    cor_accent=COR_COPA,
+                    larguras_colunas=(
+                        [LARGURA_NOME_TIME]
+                        + [LARGURA_JOGOS] * n_jogos
+                        + [LARGURA_TOTAL, LARGURA_X, LARGURA_TOTAL]
+                        + [LARGURA_JOGOS] * n_jogos
+                        + [LARGURA_NOME_TIME]
+                    ),
+                )
 
 elif aba_atual == "hist_copa":
     exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa", TIMES_CAMPEOES_COPA)
@@ -1301,5 +1436,13 @@ elif aba_atual == "estatisticas":
         top5_mas_nao_venceu,
         COR_ESTATISTICAS_TOP5,
         titulo="Mais vezes top 5 da rodada, mas perdeu ou empatou na Liga",
+        nomes_longos=True,
+    )
+
+    top1_mas_empatou = calcular_maior_pontuador_mas_empatou(resultados)
+    exibir_ranking_titulos(
+        top1_mas_empatou,
+        COR_ESTATISTICAS_EMPATE_LIDER,
+        titulo="Mais vezes líder da rodada, mas empatou na Liga",
         nomes_longos=True,
     )
