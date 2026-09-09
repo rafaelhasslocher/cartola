@@ -1119,7 +1119,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("Cartola Djamba Feipa - 2026")
+st.markdown(
+    "<h1 style='margin:0;'>Cartola Djamba Feipa - 2026</h1>",
+    unsafe_allow_html=True,
+)
 
 aba_atual = st.query_params.get("aba", "liga")
 if aba_atual not in {chave for chave, _, _ in ABAS}:
