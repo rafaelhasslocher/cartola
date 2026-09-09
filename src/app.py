@@ -937,9 +937,9 @@ st.markdown(
     /* ---------- Navegação por abas (HTML/CSS próprio) ---------- */
     .tab-nav {{
         display: flex;
-        justify-content: flex-start;
+        justify-content: center;
         gap: 8px;
-        row-gap: 10px;
+        row-gap: 18px;
         margin-top: 24px;
         margin-bottom: 14px;
         border-bottom: 2px solid rgba(128, 128, 128, 0.15);
@@ -998,8 +998,8 @@ st.markdown(
         content: "";
         position: absolute;
         left: -20px;
-        top: -0.25em;
-        bottom: -0.25em;
+        top: 0;
+        bottom: 0;
         width: 4px;
         border-radius: 3px;
         background: {COR_LIGA};
@@ -1508,7 +1508,7 @@ elif aba_atual == "estatisticas":
     )
 
 elif aba_atual == "regras":
-    exibir_cabecalho_secao("Regras", COR_REGRAS)
+    exibir_cabecalho_secao("Regra", COR_REGRAS)
 
     exibir_subtitulo("Liga", COR_LIGA)
     st.markdown("Em construção.")
