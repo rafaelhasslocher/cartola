@@ -65,6 +65,7 @@ NOMES_FASES = {
 COR_LIGA = "#D98CB3"
 COR_COPA = "#B39DDB"
 COR_ESTATISTICAS = "#4FB0AE"
+COR_REGRAS = "#E3A857"
 
 COR_OURO = "rgba(255, 215, 0, 0.28)"
 COR_PRATA = "rgba(192, 192, 192, 0.24)"
@@ -635,11 +636,11 @@ def obter_param_int(nome, valor_padrao):
 
 
 ABAS = [
-    ("liga", "🏆 Liga", "liga"),
-    ("hist_liga", "📜 Histórico Liga", "liga"),
-    ("copa", "🥇 Copa", "copa"),
-    ("hist_copa", "📜 Histórico Copa", "copa"),
+    ("liga", "🏆 Tabela Liga", "liga"),
+    ("copa", "🥇 Tabela Copa", "copa"),
+    ("hall", "🏛️ Hall de Campeões", "hall"),
     ("estatisticas", "📊 Estatísticas 2026", "estatisticas"),
+    ("regras", "📖 Regras", "regras"),
 ]
 
 
@@ -655,8 +656,12 @@ def exibir_navegacao_abas(aba_atual):
             classes += f" ativa grupo-{grupo}"
         if chave == "copa":
             classes += " divisor"
+        if chave == "hall":
+            classes += " divisor"
         if chave == "estatisticas":
             classes += " divisor divisor-estatisticas"
+        if chave == "regras":
+            classes += " divisor divisor-regras"
         href = construir_href(aba=chave)
         itens_html += f"<a class='{classes}' href='{href}' target='_self'>{rotulo}</a>"
     st.markdown(f"<div class='tab-nav'>{itens_html}</div>", unsafe_allow_html=True)
@@ -785,6 +790,22 @@ def exibir_historico(titulos, cor_accent, nome_campeonato, times_por_temporada=N
     exibir_ranking_titulos(titulos, cor_accent)
     exibir_subtitulo("Campeões por temporada", cor_accent)
     exibir_linha_do_tempo_titulos(titulos, cor_accent, times_por_temporada)
+
+
+def exibir_subabas_hall(sub_atual):
+    """Sub-navegação (HTML/CSS próprio) para alternar, dentro da aba "Hall
+    de Campeões", entre o histórico da Liga e o da Copa."""
+    itens_html = ""
+    for chave, rotulo, cor in (("liga", "Liga", COR_LIGA), ("copa", "Copa", COR_COPA)):
+        classes = "subaba-item"
+        if chave == sub_atual:
+            classes += " ativa"
+        href = construir_href(aba="hall", sub_hall=chave)
+        itens_html += (
+            f"<a class='{classes}' href='{href}' target='_self' "
+            f"style='--accent:{cor};'>{rotulo}</a>"
+        )
+    st.markdown(f"<div class='subaba-nav'>{itens_html}</div>", unsafe_allow_html=True)
 
 
 def _resolver_confrontos_fase_copa(
@@ -954,6 +975,14 @@ st.markdown(
         color: {COR_ESTATISTICAS};
         border-bottom-color: {COR_ESTATISTICAS};
     }}
+    .tab-item.ativa.grupo-hall {{
+        color: {COR_LIGA};
+        border-bottom-color: {COR_LIGA};
+    }}
+    .tab-item.ativa.grupo-regras {{
+        color: {COR_REGRAS};
+        border-bottom-color: {COR_REGRAS};
+    }}
     /* divisória rosa fixa entre cada grupamento (Liga, Copa, Estatísticas) */
     .tab-item.divisor {{
         margin-left: 36px;
@@ -977,6 +1006,28 @@ st.markdown(
         opacity: 0.9;
     }}
     
+
+    /* ---------- Sub-abas do Hall de Campeões (HTML/CSS próprio) ---------- */
+    .subaba-nav {{
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin: 4px 0 18px 0;
+    }}
+    .subaba-item {{
+        padding: 5px 18px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-decoration: none !important;
+        color: inherit;
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        border-radius: 999px;
+    }}
+    .subaba-item.ativa {{
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+    }}
 
     /* ---------- Seletor de rodada (HTML/CSS próprio) ---------- */
     .rodada-nav {{
@@ -1068,17 +1119,22 @@ st.markdown(
         .tab-item.divisor::before {{
             left: -11px;
         }}
-        /* no celular a "Estatísticas 2026" costuma sobrar sozinha na
-           última linha (as outras quatro abas cabem na primeira); nesse
-           caso não faz sentido nem a divisória rosa (não há mais nada
-           colado nela) nem deixá-la grudada à esquerda, então ela ganha
-           margem automática dos dois lados para ficar centralizada na
-           própria linha, e a divisória é escondida. */
+        /* no celular "Tabela Liga", "Tabela Copa" e "Hall de Campeões"
+           cabem na primeira linha, enquanto "Estatísticas" e "Regras"
+           sobram para a segunda; nessa segunda linha não faz sentido a
+           divisória solta antes de Estatísticas (não há nada colado a
+           ela na mesma linha), então ela é escondida, e o par
+           Estatísticas + Regras ganha margem automática nas pontas para
+           ficar centralizado como bloco, mantendo a divisória rosa entre
+           as duas. */
         .tab-item.divisor-estatisticas {{
-            margin: 0 auto;
+            margin-left: auto;
         }}
         .tab-item.divisor-estatisticas::before {{
             display: none;
+        }}
+        .tab-item.divisor-regras {{
+            margin-right: auto;
         }}
         .rodada-pill {{
             flex: 0 0 38px;
@@ -1224,8 +1280,15 @@ if aba_atual == "liga":
             )
             st.caption("A classificação aparece aqui assim que a rodada acontecer.")
 
-elif aba_atual == "hist_liga":
-    exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga", TIMES_CAMPEOES_LIGA)
+elif aba_atual == "hall":
+    sub_hall = st.query_params.get("sub_hall", "liga")
+    if sub_hall not in {"liga", "copa"}:
+        sub_hall = "liga"
+    exibir_subabas_hall(sub_hall)
+    if sub_hall == "liga":
+        exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga", TIMES_CAMPEOES_LIGA)
+    else:
+        exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa", TIMES_CAMPEOES_COPA)
 
 elif aba_atual == "copa":
     pontuacoes_completas = _carregar_pontuacoes_cache(
@@ -1404,9 +1467,6 @@ elif aba_atual == "copa":
                     ),
                 )
 
-elif aba_atual == "hist_copa":
-    exibir_historico(CAMPEOES_COPA, COR_COPA, "Copa", TIMES_CAMPEOES_COPA)
-
 elif aba_atual == "estatisticas":
     ranking = _obter_ranking_cache(CAMINHO_RANKING, _versao_arquivo(CAMINHO_RANKING))
     resultados = _obter_resultados_cache(
@@ -1446,3 +1506,12 @@ elif aba_atual == "estatisticas":
         titulo="Mais vezes líder da rodada, mas empatou na Liga",
         nomes_longos=True,
     )
+
+elif aba_atual == "regras":
+    exibir_cabecalho_secao("Regras", COR_REGRAS)
+
+    exibir_subtitulo("Liga", COR_LIGA)
+    st.markdown("Em construção.")
+
+    exibir_subtitulo("Copa", COR_COPA)
+    st.markdown("Em construção.")
