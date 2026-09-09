@@ -928,6 +928,9 @@ st.markdown(
         letter-spacing: -0.02em;
         font-size: 2.8rem !important;
         text-align: center;
+        width: 100%;
+        display: flex;
+        justify-content: center;
         color: rgba(20, 19, 20, 0.75) !important;
     }}
 
