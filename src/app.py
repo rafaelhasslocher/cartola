@@ -66,6 +66,7 @@ COR_LIGA = "#D98CB3"
 COR_COPA = "#B39DDB"
 COR_ESTATISTICAS = "#4FB0AE"
 COR_REGRAS = "#E3A857"
+COR_HALL = "#4A7FC9"
 
 COR_OURO = "rgba(255, 215, 0, 0.28)"
 COR_PRATA = "rgba(192, 192, 192, 0.24)"
@@ -645,8 +646,8 @@ ABAS = [
 
 
 def exibir_navegacao_abas(aba_atual):
-    """Barra de abas 100% própria (HTML/CSS puro), com uma divisória rosa
-    fixa entre cada grupamento (Liga, Copa e Estatísticas). Não depende de
+    """Barra de abas 100% própria (HTML/CSS puro), em formato de pílulas —
+    cada aba ganha um fundo na cor do seu grupo quando ativa. Não depende de
     nenhuma classe interna do Streamlit/BaseWeb, então o visual não pode
     "quebrar" por causa de mudanças de versão."""
     itens_html = ""
@@ -654,14 +655,10 @@ def exibir_navegacao_abas(aba_atual):
         classes = "tab-item"
         if chave == aba_atual:
             classes += f" ativa grupo-{grupo}"
-        if chave == "copa":
-            classes += " divisor"
-        if chave == "hall":
-            classes += " divisor"
         if chave == "estatisticas":
-            classes += " divisor divisor-estatisticas"
+            classes += " linha2-inicio"
         if chave == "regras":
-            classes += " divisor divisor-regras"
+            classes += " linha2-fim"
         href = construir_href(aba=chave)
         itens_html += f"<a class='{classes}' href='{href}' target='_self'>{rotulo}</a>"
     st.markdown(f"<div class='tab-nav'>{itens_html}</div>", unsafe_allow_html=True)
@@ -939,20 +936,21 @@ st.markdown(
         display: flex;
         justify-content: center;
         gap: 8px;
-        row-gap: 18px;
+        row-gap: 10px;
         margin-top: 24px;
         margin-bottom: 14px;
-        border-bottom: 2px solid rgba(128, 128, 128, 0.15);
+        padding: 6px;
+        background: rgba(128, 128, 128, 0.08);
+        border-radius: 14px;
         flex-wrap: wrap;
     }}
     .tab-item {{
-        padding: 6px 10px 10px 10px;
-        font-weight: 800;
+        padding: 8px 16px;
+        font-weight: 700;
         font-size: 0.90rem;
         text-decoration: none !important;
-        color: rgba(120, 120, 120, 0.85);
-        border-bottom: 4px solid transparent;
-        position: relative;
+        color: rgba(90, 90, 90, 0.85);
+        border-radius: 10px;
         white-space: nowrap;
     }}
     /* garante que nenhum estilo global de link (ex.: sublinhado padrão do
@@ -961,31 +959,27 @@ st.markdown(
         text-decoration: none !important;
     }}
     .tab-item:hover {{
-        color: rgba(80, 80, 80, 0.95);
+        background: rgba(128, 128, 128, 0.14);
     }}
     .tab-item.ativa.grupo-liga {{
-        color: {COR_LIGA};
-        border-bottom-color: {COR_LIGA};
+        background: {COR_LIGA};
+        color: #fff;
     }}
     .tab-item.ativa.grupo-copa {{
-        color: {COR_COPA};
-        border-bottom-color: {COR_COPA};
+        background: {COR_COPA};
+        color: #fff;
     }}
     .tab-item.ativa.grupo-estatisticas {{
-        color: {COR_ESTATISTICAS};
-        border-bottom-color: {COR_ESTATISTICAS};
+        background: {COR_ESTATISTICAS};
+        color: #fff;
     }}
     .tab-item.ativa.grupo-hall {{
-        color: {COR_LIGA};
-        border-bottom-color: {COR_LIGA};
+        background: {COR_HALL};
+        color: #fff;
     }}
     .tab-item.ativa.grupo-regras {{
-        color: {COR_REGRAS};
-        border-bottom-color: {COR_REGRAS};
-    }}
-    /* divisória rosa fixa entre cada grupamento (Liga, Copa, Estatísticas) */
-    .tab-item.divisor {{
-        margin-left: 36px;
+        background: {COR_REGRAS};
+        color: #fff;
     }}
     .tabela table td {{
         white-space: nowrap;
@@ -993,17 +987,6 @@ st.markdown(
     .tabela table td, .tabela table th {{
         font-size: 0.85rem !important;
         padding: 6px 8px !important;
-    }}
-    .tab-item.divisor::before {{
-        content: "";
-        position: absolute;
-        left: -20px;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        border-radius: 3px;
-        background: {COR_LIGA};
-        opacity: 0.9;
     }}
     
 
@@ -1111,29 +1094,17 @@ st.markdown(
         }}
         .tab-item {{
             font-size: 0.75rem;
-            padding: 6px 8px 10px 8px;
-        }}
-        .tab-item.divisor {{
-            margin-left: 18px;
-        }}
-        .tab-item.divisor::before {{
-            left: -11px;
+            padding: 7px 12px;
         }}
         /* no celular "Tabela Liga", "Tabela Copa" e "Hall de Campeões"
            cabem na primeira linha, enquanto "Estatísticas" e "Regras"
-           sobram para a segunda; nessa segunda linha não faz sentido a
-           divisória solta antes de Estatísticas (não há nada colado a
-           ela na mesma linha), então ela é escondida, e o par
-           Estatísticas + Regras ganha margem automática nas pontas para
-           ficar centralizado como bloco, mantendo a divisória rosa entre
-           as duas. */
-        .tab-item.divisor-estatisticas {{
+           sobram para a segunda; o par ganha margem automática nas
+           pontas para ficar centralizado como bloco na sua própria
+           linha. */
+        .tab-item.linha2-inicio {{
             margin-left: auto;
         }}
-        .tab-item.divisor-estatisticas::before {{
-            display: none;
-        }}
-        .tab-item.divisor-regras {{
+        .tab-item.linha2-fim {{
             margin-right: auto;
         }}
         .rodada-pill {{
@@ -1508,7 +1479,7 @@ elif aba_atual == "estatisticas":
     )
 
 elif aba_atual == "regras":
-    exibir_cabecalho_secao("Regra", COR_REGRAS)
+    exibir_cabecalho_secao("Regras", COR_REGRAS)
 
     exibir_subtitulo("Liga", COR_LIGA)
     st.markdown("Em construção.")
