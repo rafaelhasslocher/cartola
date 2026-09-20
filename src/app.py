@@ -90,8 +90,6 @@ LARGURA_POSICAO = "var(--largura-posicao)"
 LARGURA_TOTAL = "var(--largura-total)"
 LARGURA_JOGOS = "var(--largura-jogos)"
 
-COR_ESTATISTICAS = "#4FB0AE"
-
 COR_ESTATISTICAS_LIDER = "#5FA8D3"
 COR_ESTATISTICAS_TOP3 = "#4FB0AE"
 COR_ESTATISTICAS_TOP5 = "#6FBF8B"
@@ -258,6 +256,23 @@ def _pontuacoes_dos_times_na_rodada(resultados, rodada):
     return pontuacoes
 
 
+def _diferencas_confronto_direto(resultados, rodada):
+    """Para cada jogo da rodada, o time e a diferença de pontos do seu
+    confronto direto na Liga (positiva se venceu, negativa se perdeu, perto
+    de zero se empatou). Numa rodada dupla um time aparece duas vezes, uma
+    por jogo — por isso o retorno é uma lista, e não um dict por time."""
+    jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
+    diferencas = []
+    for _, jogo in jogos_rodada.iterrows():
+        diferencas.append(
+            (jogo["time1"], jogo["pontuacao_time1"] - jogo["pontuacao_time2"])
+        )
+        diferencas.append(
+            (jogo["time2"], jogo["pontuacao_time2"] - jogo["pontuacao_time1"])
+        )
+    return diferencas
+
+
 def calcular_top_n_por_rodada(resultados, n=1):
     """Para cada rodada do Brasileirão, ordena os 12 times pela pontuação
     bruta que fizeram naquela rodada (não pela classificação acumulada da
@@ -268,8 +283,8 @@ def calcular_top_n_por_rodada(resultados, n=1):
         if not pontuacoes_rodada:
             continue
         ordenado = sorted(pontuacoes_rodada.items(), key=lambda item: -item[1])
-        for time, _ in ordenado[:n]:
-            ocorrencias.append((rodada, nome_completo(time), None))
+        for nome_time, _ in ordenado[:n]:
+            ocorrencias.append((rodada, nome_completo(nome_time), None))
     return ocorrencias
 
 
@@ -290,21 +305,11 @@ def calcular_top_n_mas_nao_venceu(resultados, n=5):
             continue
 
         ordenado = sorted(pontuacoes_rodada.items(), key=lambda item: -item[1])
-        top_times = {time for time, _ in ordenado[:n]}
+        top_times = {nome_time for nome_time, _ in ordenado[:n]}
 
-        jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
-        for _, jogo in jogos_rodada.iterrows():
-            pares = (
-                (jogo["time1"], jogo["pontuacao_time1"], jogo["pontuacao_time2"]),
-                (jogo["time2"], jogo["pontuacao_time2"], jogo["pontuacao_time1"]),
-            )
-            for time, pontos_time, pontos_adversario in pares:
-                if time not in top_times:
-                    continue
-                diferenca = pontos_time - pontos_adversario
-                perdeu_ou_empatou = diferenca < MARGEM_EMPATE
-                if perdeu_ou_empatou:
-                    ocorrencias.append((rodada, nome_completo(time), None))
+        for nome_time, diferenca in _diferencas_confronto_direto(resultados, rodada):
+            if nome_time in top_times and diferenca < MARGEM_EMPATE:
+                ocorrencias.append((rodada, nome_completo(nome_time), None))
 
     return ocorrencias
 
@@ -319,21 +324,10 @@ def calcular_maior_pontuador_mas_empatou(resultados):
         if not pontuacoes_rodada:
             continue
 
-        ordenado = sorted(pontuacoes_rodada.items(), key=lambda item: -item[1])
-        maior_pontuador = ordenado[0][0]
-
-        jogos_rodada = resultados[resultados["rodada_brasileirao"] == rodada]
-        for _, jogo in jogos_rodada.iterrows():
-            pares = (
-                (jogo["time1"], jogo["pontuacao_time1"], jogo["pontuacao_time2"]),
-                (jogo["time2"], jogo["pontuacao_time2"], jogo["pontuacao_time1"]),
-            )
-            for time, pontos_time, pontos_adversario in pares:
-                if time != maior_pontuador:
-                    continue
-                empatou = abs(pontos_time - pontos_adversario) < MARGEM_EMPATE
-                if empatou:
-                    ocorrencias.append((rodada, nome_completo(time), None))
+        maior_pontuador = max(pontuacoes_rodada, key=pontuacoes_rodada.get)
+        for nome_time, diferenca in _diferencas_confronto_direto(resultados, rodada):
+            if nome_time == maior_pontuador and abs(diferenca) < MARGEM_EMPATE:
+                ocorrencias.append((rodada, nome_completo(nome_time), None))
 
     return ocorrencias
 
