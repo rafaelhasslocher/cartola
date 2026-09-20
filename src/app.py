@@ -1,6 +1,5 @@
 import os
 import time
-from urllib.parse import urlencode
 
 import pandas as pd
 import streamlit as st
@@ -610,16 +609,6 @@ def exibir_confrontos_liga(
         )
 
 
-def construir_href(**overrides):
-    """Monta a query string da URL atual, sobrescrevendo apenas as chaves
-    passadas em overrides e preservando as demais (ex.: ao trocar a rodada
-    da Liga, a aba atual e a rodada da Copa continuam na URL)."""
-    params = dict(st.query_params)
-    for chave, valor in overrides.items():
-        params[chave] = str(valor)
-    return "?" + urlencode(params)
-
-
 def obter_param_int(nome, valor_padrao):
     valor = st.query_params.get(nome)
     if valor is None:
@@ -639,52 +628,55 @@ ABAS = [
 ]
 
 
-def exibir_navegacao_abas(aba_atual):
-    """Barra de abas 100% própria (HTML/CSS puro), em formato de pílulas —
-    cada aba ganha um fundo na cor do seu grupo quando ativa. Não depende de
-    nenhuma classe interna do Streamlit/BaseWeb, então o visual não pode
-    "quebrar" por causa de mudanças de versão."""
-    itens_html = ""
-    for chave, rotulo, grupo in ABAS:
-        classes = "tab-item"
-        if chave == aba_atual:
-            classes += f" ativa grupo-{grupo}"
-        if chave == "estatisticas":
-            classes += " linha2-inicio"
-        if chave == "regras":
-            classes += " linha2-fim"
-        href = construir_href(aba=chave)
-        itens_html += f"<a class='{classes}' href='{href}' target='_self'>{rotulo}</a>"
-    st.markdown(f"<div class='tab-nav'>{itens_html}</div>", unsafe_allow_html=True)
+def exibir_navegacao_abas():
+    """Barra de abas nativa do Streamlit (st.segmented_control). Trocar de
+    aba dispara só um rerun leve pelo mesmo WebSocket — bem mais rápido do
+    que a navegação por <a href> usada antes, que recarregava a página
+    inteira a cada clique. Retorna a chave da aba selecionada."""
+    rotulo_por_chave = {chave: rotulo for chave, rotulo, _ in ABAS}
+    valor_inicial = st.query_params.get("aba", "liga")
+    if valor_inicial not in rotulo_por_chave:
+        valor_inicial = "liga"
 
-
-def exibir_seletor_rodada(
-    rodadas, valor_atual, param_nome, aba_nome, cor_accent, definitivos=None
-):
-    """Seletor de rodada 100% próprio (HTML/CSS puro). Cada rodada é um link
-    que atualiza a URL; nenhum CSS aqui depende de estrutura de terceiros,
-    então as bordas ficam sempre quadradas e não há "brilho" de seleção que
-    possa vazar sobre o botão vizinho (usamos box-shadow inset, que nunca
-    ultrapassa os limites do próprio elemento)."""
-    definitivos = definitivos or {}
-    itens_html = ""
-    for r in rodadas:
-        parcial = not definitivos.get(r, True)
-        classes = "rodada-pill"
-        if r == valor_atual:
-            classes += " ativa"
-        if parcial:
-            classes += " parcial"
-        href = construir_href(aba=aba_nome, **{param_nome: r})
-        rotulo = f"{r} - Parcial" if parcial else str(r)
-        titulo = " title='Rodada parcial'" if parcial else ""
-        itens_html += (
-            f"<a class='{classes}' href='{href}' target='_self'{titulo}>{rotulo}</a>"
-        )
-    st.markdown(
-        f"<div class='rodada-nav' style='--accent:{cor_accent};'>{itens_html}</div>",
-        unsafe_allow_html=True,
+    aba_selecionada = st.segmented_control(
+        "Navegação",
+        options=[chave for chave, _, _ in ABAS],
+        format_func=lambda chave: rotulo_por_chave[chave],
+        default=valor_inicial,
+        key="nav_aba",
+        label_visibility="collapsed",
     )
+    if aba_selecionada is None:
+        aba_selecionada = valor_inicial
+
+    st.query_params["aba"] = aba_selecionada
+    return aba_selecionada
+
+
+def exibir_seletor_rodada(rodadas, valor_atual, param_nome, definitivos=None, key=None):
+    """Seletor de rodada nativo (st.segmented_control), mesma lógica da
+    navegação por abas: troca de rodada sem recarregar a página. Rodadas
+    parciais (mercado ainda não fechou) ganham um "⏳" no rótulo. Retorna a
+    rodada selecionada."""
+    definitivos = definitivos or {}
+
+    def _rotulo(r):
+        parcial = not definitivos.get(r, True)
+        return f"{r} ⏳" if parcial else str(r)
+
+    rodada_selecionada = st.segmented_control(
+        "Rodada",
+        options=rodadas,
+        format_func=_rotulo,
+        default=valor_atual,
+        key=key or f"nav_{param_nome}",
+        label_visibility="collapsed",
+    )
+    if rodada_selecionada is None:
+        rodada_selecionada = valor_atual
+
+    st.query_params[param_nome] = str(rodada_selecionada)
+    return rodada_selecionada
 
 
 def exibir_ranking_titulos(
@@ -784,19 +776,23 @@ def exibir_historico(titulos, cor_accent, nome_campeonato, times_por_temporada=N
 
 
 def exibir_subabas_hall(sub_atual):
-    """Sub-navegação (HTML/CSS próprio) para alternar, dentro da aba "Hall
-    de Campeões", entre o histórico da Liga e o da Copa."""
-    itens_html = ""
-    for chave, rotulo, cor in (("liga", "Liga", COR_LIGA), ("copa", "Copa", COR_COPA)):
-        classes = "subaba-item"
-        if chave == sub_atual:
-            classes += " ativa"
-        href = construir_href(aba="hall", sub_hall=chave)
-        itens_html += (
-            f"<a class='{classes}' href='{href}' target='_self' "
-            f"style='--accent:{cor};'>{rotulo}</a>"
-        )
-    st.markdown(f"<div class='subaba-nav'>{itens_html}</div>", unsafe_allow_html=True)
+    """Sub-navegação nativa (st.segmented_control), dentro da aba "Hall de
+    Campeões", entre o histórico da Liga e o da Copa — sem recarregar a
+    página. Retorna a sub-aba selecionada."""
+    rotulos = {"liga": "Liga", "copa": "Copa"}
+    selecionado = st.segmented_control(
+        "Sub-navegação do Hall",
+        options=["liga", "copa"],
+        format_func=lambda chave: rotulos[chave],
+        default=sub_atual,
+        key="nav_sub_hall",
+        label_visibility="collapsed",
+    )
+    if selecionado is None:
+        selecionado = sub_atual
+
+    st.query_params["sub_hall"] = selecionado
+    return selecionado
 
 
 def _resolver_confrontos_fase_copa(
@@ -928,56 +924,6 @@ st.markdown(
         color: rgba(20, 19, 20, 0.75) !important;
     }}
 
-    /* ---------- Navegação por abas (HTML/CSS próprio) ---------- */
-    .tab-nav {{
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        row-gap: 10px;
-        margin-top: 24px;
-        margin-bottom: 14px;
-        padding: 6px;
-        background: rgba(128, 128, 128, 0.08);
-        border-radius: 14px;
-        flex-wrap: wrap;
-    }}
-    .tab-item {{
-        padding: 8px 16px;
-        font-weight: 700;
-        font-size: 0.90rem;
-        text-decoration: none !important;
-        color: rgba(90, 90, 90, 0.85);
-        border-radius: 10px;
-        white-space: nowrap;
-    }}
-    /* garante que nenhum estilo global de link (ex.: sublinhado padrão do
-       navegador ou de folhas de estilo do Streamlit) apareça nas abas */
-    .tab-nav a, .tab-nav a:hover, .tab-nav a:visited, .tab-nav a:active {{
-        text-decoration: none !important;
-    }}
-    .tab-item:hover {{
-        background: rgba(128, 128, 128, 0.14);
-    }}
-    .tab-item.ativa.grupo-liga {{
-        background: {COR_LIGA};
-        color: #fff;
-    }}
-    .tab-item.ativa.grupo-copa {{
-        background: {COR_COPA};
-        color: #fff;
-    }}
-    .tab-item.ativa.grupo-estatisticas {{
-        background: {COR_ESTATISTICAS};
-        color: #fff;
-    }}
-    .tab-item.ativa.grupo-hall {{
-        background: {COR_HALL};
-        color: #fff;
-    }}
-    .tab-item.ativa.grupo-regras {{
-        background: {COR_REGRAS};
-        color: #fff;
-    }}
     .tabela table td {{
         white-space: nowrap;
     }}
@@ -985,76 +931,181 @@ st.markdown(
         font-size: 0.85rem !important;
         padding: 6px 8px !important;
     }}
-    
 
-    /* ---------- Sub-abas do Hall de Campeões (HTML/CSS próprio) ---------- */
-    .subaba-nav {{
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin: 4px 0 18px 0;
+    /* ---------- Navegação (st.segmented_control nativo) ----------
+       Reproduz o visual antigo (feito com <a href>) sobre os botões reais
+       do widget. Só usamos hooks estáveis (.st-key-<key>, data-testid,
+       data-variant, aria-checked, role) — nunca as classes
+       "st-emotion-cache-..." — e a cor de cada aba ativa vem da posição
+       (:nth-child), já que a ordem de ABAS é fixa.
+
+       Dois detalhes do widget que exigem cuidado:
+       1) o container vem com width="fit-content": forçamos 100% para a
+          barra ocupar a largura toda, como antes;
+       2) o texto do botão fica num <p> com peso/tamanho/cor próprios, que
+          ignoram o que definimos no <button>: por isso o bloco "p" abaixo
+          faz o texto herdar do botão. */
+    .st-key-nav_aba,
+    .st-key-nav_rodada_liga,
+    .st-key-nav_rodada_copa,
+    .st-key-nav_sub_hall,
+    .st-key-nav_aba div[data-testid="stButtonGroup"],
+    .st-key-nav_rodada_liga div[data-testid="stButtonGroup"],
+    .st-key-nav_rodada_copa div[data-testid="stButtonGroup"],
+    .st-key-nav_sub_hall div[data-testid="stButtonGroup"] {{
+        width: 100% !important;
     }}
-    .subaba-item {{
-        padding: 5px 18px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        text-decoration: none !important;
-        color: inherit;
-        border: 1px solid rgba(128, 128, 128, 0.35);
-        border-radius: 999px;
+    .st-key-nav_aba label[data-testid="stWidgetLabel"],
+    .st-key-nav_rodada_liga label[data-testid="stWidgetLabel"],
+    .st-key-nav_rodada_copa label[data-testid="stWidgetLabel"],
+    .st-key-nav_sub_hall label[data-testid="stWidgetLabel"] {{
+        display: none !important;
     }}
-    .subaba-item.ativa {{
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #fff;
+    .st-key-nav_aba button[data-variant="segmented_control"] p,
+    .st-key-nav_rodada_liga button[data-variant="segmented_control"] p,
+    .st-key-nav_rodada_copa button[data-variant="segmented_control"] p,
+    .st-key-nav_sub_hall button[data-variant="segmented_control"] p {{
+        font-weight: inherit !important;
+        font-size: inherit !important;
+        color: inherit !important;
+        line-height: 1.6 !important;
+        margin: 0 !important;
     }}
 
-    /* ---------- Seletor de rodada (HTML/CSS próprio) ---------- */
-    .rodada-nav {{
-        display: flex;
+    /* ---------- Abas principais ---------- */
+    .st-key-nav_aba div[role="radiogroup"] {{
+        display: flex !important;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 6px;
+        gap: 8px !important;
+        row-gap: 10px !important;
+        width: 100% !important;
+        max-width: none !important;
+        box-sizing: border-box;
+        margin-top: 24px;
+        margin-bottom: 3px;
+        padding: 6px;
+        background: rgba(128, 128, 128, 0.08);
+        border-radius: 14px;
+    }}
+    .st-key-nav_aba button[data-variant="segmented_control"] {{
+        border-radius: 10px !important;
+        border: none !important;
+        padding: 8px 16px !important;
+        min-height: 39px !important;
+        font-weight: 700 !important;
+        font-size: 0.90rem !important;
+        background: transparent !important;
+        color: #0054a3 !important;
+    }}
+    .st-key-nav_aba button[data-variant="segmented_control"]:hover {{
+        background: rgba(128, 128, 128, 0.14) !important;
+    }}
+    .st-key-nav_aba div[role="radiogroup"] > button:nth-child(1)[aria-checked="true"] {{
+        background: {COR_LIGA} !important;
+        color: #fff !important;
+    }}
+    .st-key-nav_aba div[role="radiogroup"] > button:nth-child(2)[aria-checked="true"] {{
+        background: {COR_COPA} !important;
+        color: #fff !important;
+    }}
+    .st-key-nav_aba div[role="radiogroup"] > button:nth-child(3)[aria-checked="true"] {{
+        background: {COR_HALL} !important;
+        color: #fff !important;
+    }}
+    .st-key-nav_aba div[role="radiogroup"] > button:nth-child(4)[aria-checked="true"] {{
+        background: {COR_ESTATISTICAS} !important;
+        color: #fff !important;
+    }}
+    .st-key-nav_aba div[role="radiogroup"] > button:nth-child(5)[aria-checked="true"] {{
+        background: {COR_REGRAS} !important;
+        color: #fff !important;
+    }}
+
+    /* ---------- Sub-abas do Hall de Campeões ---------- */
+    .st-key-nav_sub_hall div[role="radiogroup"] {{
+        display: flex !important;
+        justify-content: center;
+        gap: 8px !important;
+        max-width: none !important;
         margin: 4px 0 18px 0;
     }}
-    .rodada-pill {{
-        flex: 0 0 46px;
-        width: 46px;
-        height: 34px;
-        display: flex;
-        align-items: center;
+    .st-key-nav_sub_hall button[data-variant="segmented_control"] {{
+        padding: 5px 18px !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        border: 1px solid rgba(128, 128, 128, 0.35) !important;
+        border-radius: 999px !important;
+        background: transparent !important;
+        color: inherit !important;
+    }}
+    .st-key-nav_sub_hall div[role="radiogroup"] > button:nth-child(1)[aria-checked="true"] {{
+        background: {COR_LIGA} !important;
+        border-color: {COR_LIGA} !important;
+        color: #fff !important;
+    }}
+    .st-key-nav_sub_hall div[role="radiogroup"] > button:nth-child(2)[aria-checked="true"] {{
+        background: {COR_COPA} !important;
+        border-color: {COR_COPA} !important;
+        color: #fff !important;
+    }}
+
+    /* ---------- Seletor de rodada (caixinhas numeradas) ---------- */
+    .st-key-nav_rodada_liga div[role="radiogroup"],
+    .st-key-nav_rodada_copa div[role="radiogroup"] {{
+        display: flex !important;
+        flex-wrap: wrap;
         justify-content: center;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: inherit;
-        border: 1px solid rgba(128, 128, 128, 0.35);
-        border-radius: 0;
+        gap: 6px !important;
+        width: 100% !important;
+        max-width: none !important;
         box-sizing: border-box;
-        background: transparent;
+        padding: 0 20px;
+        margin: 0 0 2px 0;
     }}
-    .rodada-pill:hover {{
-        border-color: var(--accent);
+    .st-key-nav_rodada_liga button[data-variant="segmented_control"],
+    .st-key-nav_rodada_copa button[data-variant="segmented_control"] {{
+        min-width: 46px !important;
+        height: 34px !important;
+        padding: 0 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        border: 1px solid rgba(128, 128, 128, 0.35) !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: #0054a3 !important;
     }}
-    .rodada-pill.ativa {{
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #fff;
+    .st-key-nav_rodada_liga button[data-variant="segmented_control"] p,
+    .st-key-nav_rodada_copa button[data-variant="segmented_control"] p {{
+        text-decoration: underline !important;
     }}
-    /* indicador de "rodada parcial": o rótulo mostra "N - Parcial" por
-       extenso, então o botão precisa de largura livre (os demais continuam
-       com o tamanho fixo, em formato de quadrado) */
-    .rodada-pill.parcial {{
-        flex: 0 0 auto;
-        width: auto;
-        padding: 0 10px;
+    .st-key-nav_rodada_liga button[data-variant="segmented_control"]:hover {{
+        border-color: {COR_LIGA} !important;
     }}
-    .rodada-pill.parcial:not(.ativa) {{
-        border-color: var(--accent);
-        box-shadow: inset 0 -3px 0 var(--accent);
+    .st-key-nav_rodada_copa button[data-variant="segmented_control"]:hover {{
+        border-color: {COR_COPA} !important;
     }}
-    .rodada-pill.parcial.ativa {{
-        box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.85);
+    .st-key-nav_rodada_liga button[aria-checked="true"] {{
+        background: {COR_LIGA} !important;
+        border-color: {COR_LIGA} !important;
+        color: #fff !important;
+    }}
+    .st-key-nav_rodada_copa button[aria-checked="true"] {{
+        background: {COR_COPA} !important;
+        border-color: {COR_COPA} !important;
+        color: #fff !important;
+    }}
+
+    /* Azul mais claro no tema escuro (o #0054a3 some no fundo escuro). */
+    @media (prefers-color-scheme: dark) {{
+        .st-key-nav_aba button[data-variant="segmented_control"]:not([aria-checked="true"]),
+        .st-key-nav_rodada_liga button[data-variant="segmented_control"]:not([aria-checked="true"]),
+        .st-key-nav_rodada_copa button[data-variant="segmented_control"]:not([aria-checked="true"]) {{
+            color: #4da3ff !important;
+        }}
     }}
 
     /* ---------- Ajustes só para telas estreitas (celular) ----------
@@ -1086,29 +1137,23 @@ st.markdown(
         h1 {{
             font-size: 1.9rem !important;
         }}
-        .tab-nav {{
+        .st-key-nav_aba div[role="radiogroup"] {{
             gap: 4px;
         }}
-        .tab-item {{
-            font-size: 0.75rem;
-            padding: 7px 12px;
+        .st-key-nav_aba button[data-variant="segmented_control"] {{
+            font-size: 0.75rem !important;
+            padding: 7px 12px !important;
+            min-height: 34px !important;
         }}
-        /* no celular "Tabela Liga", "Tabela Copa" e "Hall de Campeões"
-           cabem na primeira linha, enquanto "Estatísticas" e "Regras"
-           sobram para a segunda; o par ganha margem automática nas
-           pontas para ficar centralizado como bloco na sua própria
-           linha. */
-        .tab-item.linha2-inicio {{
-            margin-left: auto;
+        .st-key-nav_rodada_liga div[role="radiogroup"],
+        .st-key-nav_rodada_copa div[role="radiogroup"] {{
+            padding: 0;
         }}
-        .tab-item.linha2-fim {{
-            margin-right: auto;
-        }}
-        .rodada-pill {{
-            flex: 0 0 38px;
-            width: 38px;
-            height: 30px;
-            font-size: 0.78rem;
+        .st-key-nav_rodada_liga button[data-variant="segmented_control"],
+        .st-key-nav_rodada_copa button[data-variant="segmented_control"] {{
+            min-width: 38px !important;
+            height: 30px !important;
+            font-size: 0.78rem !important;
         }}
     }}
     </style>
@@ -1121,11 +1166,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-aba_atual = st.query_params.get("aba", "liga")
-if aba_atual not in {chave for chave, _, _ in ABAS}:
-    aba_atual = "liga"
-
-exibir_navegacao_abas(aba_atual)
+aba_atual = exibir_navegacao_abas()
 
 if aba_atual == "liga":
     ranking = _obter_ranking_cache(CAMINHO_RANKING, _versao_arquivo(CAMINHO_RANKING))
@@ -1143,16 +1184,14 @@ if aba_atual == "liga":
         else {}
     )
     rodada_default = rodadas_jogadas[-1] if rodadas_jogadas else rodadas_disponiveis[-1]
-    rodada_atual = obter_param_int("rodada_liga", rodada_default)
-    if rodada_atual not in rodadas_disponiveis:
-        rodada_atual = rodada_default
+    valor_inicial_liga = obter_param_int("rodada_liga", rodada_default)
+    if valor_inicial_liga not in rodadas_disponiveis:
+        valor_inicial_liga = rodada_default
 
-    exibir_seletor_rodada(
+    rodada_atual = exibir_seletor_rodada(
         rodadas_disponiveis,
-        rodada_atual,
+        valor_inicial_liga,
         param_nome="rodada_liga",
-        aba_nome="liga",
-        cor_accent=COR_LIGA,
         definitivos=definitivos_liga,
     )
 
@@ -1252,10 +1291,10 @@ if aba_atual == "liga":
             st.caption("A classificação aparece aqui assim que a rodada acontecer.")
 
 elif aba_atual == "hall":
-    sub_hall = st.query_params.get("sub_hall", "liga")
-    if sub_hall not in {"liga", "copa"}:
-        sub_hall = "liga"
-    exibir_subabas_hall(sub_hall)
+    sub_hall_inicial = st.query_params.get("sub_hall", "liga")
+    if sub_hall_inicial not in {"liga", "copa"}:
+        sub_hall_inicial = "liga"
+    sub_hall = exibir_subabas_hall(sub_hall_inicial)
     if sub_hall == "liga":
         exibir_historico(CAMPEOES_LIGA, COR_LIGA, "Liga", TIMES_CAMPEOES_LIGA)
     else:
@@ -1285,16 +1324,14 @@ elif aba_atual == "copa":
         if rodada_maxima_disputada_copa
         else rodadas_disponiveis_copa[0]
     )
-    rodada_atual_copa = obter_param_int("rodada_copa", rodada_default_copa)
-    if rodada_atual_copa not in rodadas_disponiveis_copa:
-        rodada_atual_copa = rodada_default_copa
+    valor_inicial_copa = obter_param_int("rodada_copa", rodada_default_copa)
+    if valor_inicial_copa not in rodadas_disponiveis_copa:
+        valor_inicial_copa = rodada_default_copa
 
-    exibir_seletor_rodada(
+    rodada_atual_copa = exibir_seletor_rodada(
         rodadas_disponiveis_copa,
-        rodada_atual_copa,
+        valor_inicial_copa,
         param_nome="rodada_copa",
-        aba_nome="copa",
-        cor_accent=COR_COPA,
         definitivos=definitivos_copa,
     )
 
