@@ -628,55 +628,65 @@ ABAS = [
 ]
 
 
-def exibir_navegacao_abas():
-    """Barra de abas nativa do Streamlit (st.segmented_control). Trocar de
-    aba dispara só um rerun leve pelo mesmo WebSocket — bem mais rápido do
-    que a navegação por <a href> usada antes, que recarregava a página
-    inteira a cada clique. Retorna a chave da aba selecionada."""
-    rotulo_por_chave = {chave: rotulo for chave, rotulo, _ in ABAS}
-    valor_inicial = st.query_params.get("aba", "liga")
-    if valor_inicial not in rotulo_por_chave:
-        valor_inicial = "liga"
+def _seletor_navegacao(chave, opcoes, rotulo_de, param, padrao):
+    """Navegação nativa (st.segmented_control) sincronizada com a URL.
+    Trocar de item é só um rerun leve (sem recarregar a página). Cuidados:
+    - o widget acompanha a URL quando ela muda por fora (Voltar/Avançar);
+    - clicar no item já ativo NÃO o desmarca (sempre há um item ativo);
+    - só grava em st.query_params quando o valor muda (cada gravação vira
+      uma entrada no histórico do navegador). Devolve a opção selecionada."""
+    texto_url = st.query_params.get(param)
+    na_url = next((o for o in opcoes if str(o) == texto_url), padrao)
 
-    aba_selecionada = st.segmented_control(
-        "Navegação",
-        options=[chave for chave, _, _ in ABAS],
-        format_func=lambda chave: rotulo_por_chave[chave],
-        default=valor_inicial,
-        key="nav_aba",
+    # Último valor que NÓS gravamos na URL: se a URL diz outra coisa, ela mudou
+    # por fora e o widget a acompanha. Sem `default=` de propósito.
+    ultimo = st.session_state.get(f"{chave}_anterior")
+    if chave not in st.session_state or (ultimo is not None and na_url != ultimo):
+        st.session_state[chave] = na_url
+
+    def _manter_selecao():
+        if st.session_state.get(chave) is None:
+            st.session_state[chave] = st.session_state.get(f"{chave}_anterior", na_url)
+
+    escolha = st.segmented_control(
+        param,
+        options=opcoes,
+        format_func=rotulo_de,
+        key=chave,
+        on_change=_manter_selecao,
         label_visibility="collapsed",
     )
-    if aba_selecionada is None:
-        aba_selecionada = valor_inicial
+    if escolha is None:
+        escolha = na_url
+    st.session_state[f"{chave}_anterior"] = escolha
 
-    st.query_params["aba"] = aba_selecionada
-    return aba_selecionada
+    if param in st.query_params:
+        if st.query_params[param] != str(escolha):
+            st.query_params[param] = str(escolha)
+    elif escolha != padrao:
+        st.query_params[param] = str(escolha)
+    return escolha
+
+
+def exibir_navegacao_abas():
+    rotulo_por_chave = {chave: rotulo for chave, rotulo, _ in ABAS}
+    return _seletor_navegacao(
+        "nav_aba", [c for c, _, _ in ABAS], rotulo_por_chave.get, "aba", "liga"
+    )
 
 
 def exibir_seletor_rodada(rodadas, valor_atual, param_nome, definitivos=None, key=None):
-    """Seletor de rodada nativo (st.segmented_control), mesma lógica da
-    navegação por abas: troca de rodada sem recarregar a página. Rodadas
-    parciais (mercado ainda não fechou) ganham um "⏳" no rótulo. Retorna a
-    rodada selecionada."""
+    """Seletor de rodada nativo. Rodadas parciais (mercado ainda não fechou)
+    ganham um "⏳" no rótulo. `valor_atual` é o padrão (valor da URL, ou a
+    rodada default quando a URL não tem o parâmetro)."""
     definitivos = definitivos or {}
 
     def _rotulo(r):
-        parcial = not definitivos.get(r, True)
-        return f"{r} ⏳" if parcial else str(r)
+        return f"{r} ⏳" if not definitivos.get(r, True) else str(r)
 
-    rodada_selecionada = st.segmented_control(
-        "Rodada",
-        options=rodadas,
-        format_func=_rotulo,
-        default=valor_atual,
-        key=key or f"nav_{param_nome}",
-        label_visibility="collapsed",
+    return _seletor_navegacao(
+        key or f"nav_{param_nome}", list(rodadas), _rotulo, param_nome, valor_atual
     )
-    if rodada_selecionada is None:
-        rodada_selecionada = valor_atual
-
-    st.query_params[param_nome] = str(rodada_selecionada)
-    return rodada_selecionada
 
 
 def exibir_ranking_titulos(
@@ -776,23 +786,12 @@ def exibir_historico(titulos, cor_accent, nome_campeonato, times_por_temporada=N
 
 
 def exibir_subabas_hall(sub_atual):
-    """Sub-navegação nativa (st.segmented_control), dentro da aba "Hall de
-    Campeões", entre o histórico da Liga e o da Copa — sem recarregar a
-    página. Retorna a sub-aba selecionada."""
+    """Sub-navegação nativa dentro da aba "Hall de Campeões" (Liga | Copa).
+    Retorna a sub-aba selecionada."""
     rotulos = {"liga": "Liga", "copa": "Copa"}
-    selecionado = st.segmented_control(
-        "Sub-navegação do Hall",
-        options=["liga", "copa"],
-        format_func=lambda chave: rotulos[chave],
-        default=sub_atual,
-        key="nav_sub_hall",
-        label_visibility="collapsed",
+    return _seletor_navegacao(
+        "nav_sub_hall", ["liga", "copa"], rotulos.get, "sub_hall", sub_atual
     )
-    if selecionado is None:
-        selecionado = sub_atual
-
-    st.query_params["sub_hall"] = selecionado
-    return selecionado
 
 
 def _resolver_confrontos_fase_copa(
@@ -966,11 +965,31 @@ st.markdown(
     .st-key-nav_rodada_copa button[data-variant="segmented_control"] p,
     .st-key-nav_sub_hall button[data-variant="segmented_control"] p {{
         font-weight: inherit !important;
-        font-size: inherit !important;
         color: inherit !important;
         line-height: 1.6 !important;
         margin: 0 !important;
     }}
+    /* O <p> herda o tamanho do <div> pai (14px), não o do botão: o tamanho
+       do texto é dado direto nele (celular, no @media lá embaixo). */
+    .st-key-nav_aba button[data-variant="segmented_control"] p {{
+        font-size: 0.90rem !important;
+    }}
+    .st-key-nav_sub_hall button[data-variant="segmented_control"] p,
+    .st-key-nav_rodada_liga button[data-variant="segmented_control"] p,
+    .st-key-nav_rodada_copa button[data-variant="segmented_control"] p {{
+        font-size: 0.85rem !important;
+    }}
+    /* emoji do rótulo: escala com a fonte, como o emoji inline de antes */
+    .st-key-nav_aba button[data-variant="segmented_control"] > div > span {{
+        gap: 0.35em !important;
+    }}
+    .st-key-nav_aba button[data-variant="segmented_control"] > div > span > span:first-child {{
+        font-size: inherit !important; width: 1.1em !important; height: 1.1em !important;
+    }}
+    .st-key-nav_aba [data-testid="stIconEmoji"] {{ font-size: 1em !important; }}
+    /* bloco que só carrega o <script> do Voltar/Avançar: some, com o espaçamento */
+    .element-container:has(.nav-popstate),
+    [data-testid="stElementContainer"]:has(.nav-popstate) {{ display: none !important; }}
 
     /* ---------- Abas principais ---------- */
     .st-key-nav_aba div[role="radiogroup"] {{
@@ -1145,6 +1164,13 @@ st.markdown(
             padding: 7px 12px !important;
             min-height: 34px !important;
         }}
+        .st-key-nav_aba button[data-variant="segmented_control"] p {{
+            font-size: 0.75rem !important;
+        }}
+        .st-key-nav_rodada_liga button[data-variant="segmented_control"] p,
+        .st-key-nav_rodada_copa button[data-variant="segmented_control"] p {{
+            font-size: 0.78rem !important;
+        }}
         .st-key-nav_rodada_liga div[role="radiogroup"],
         .st-key-nav_rodada_copa div[role="radiogroup"] {{
             padding: 0;
@@ -1159,6 +1185,16 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True,
+)
+
+# Voltar/Avançar do navegador: o Streamlit NÃO refaz a tela quando só a query
+# string muda por esse caminho (a URL volta, a tela não). Só nesse caso,
+# recarrega a página — como antes. Cliques nas abas seguem sem recarregar.
+st.html(
+    "<div class='nav-popstate'></div>"
+    "<script>if (!window.__navPopstate) { window.__navPopstate = true;"
+    " window.addEventListener('popstate', () => window.location.reload()); }</script>",
+    unsafe_allow_javascript=True,
 )
 
 st.markdown(
