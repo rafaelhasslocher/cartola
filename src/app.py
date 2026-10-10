@@ -1,3 +1,4 @@
+from textwrap import fill
 import os
 import time
 
@@ -26,6 +27,9 @@ from copa.logica import (
     rodadas_disputadas,
 )
 from dados.persistencia import carregar_pontuacoes, obter_ranking, obter_resultados
+from liga.evolucao import (
+    montar_evolucao_classificacao, montar_spec_evolucao,
+)
 from regras_liga import MARGEM_EMPATE, RODADA_CORTE_TURNO
 from times import nome_completo
 
@@ -1519,37 +1523,111 @@ elif aba_atual == "estatisticas":
 
     exibir_cabecalho_secao("Estatísticas 2026", COR_ESTATISTICAS)
 
-    lideres_por_rodada = calcular_lideres_por_rodada(resultados)
-    exibir_ranking_titulos(
-        lideres_por_rodada,
-        COR_ESTATISTICAS_LIDER,
-        titulo="Mais vezes maior pontuador da rodada",
-        nomes_longos=True,
+    # Controles compactos, na cor da aba, sem cartões ou títulos repetidos.
+    st.markdown("""
+    <style>
+    .st-key-secao_estatisticas [data-testid="stWidgetLabel"] p,
+    .st-key-turno_evolucao [data-testid="stWidgetLabel"] p {
+        font-weight: 600; font-size: .9rem;
+    }
+    .st-key-secao_estatisticas [role="radiogroup"],
+    .st-key-turno_evolucao [role="radiogroup"] {
+        display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .st-key-secao_estatisticas [role="radiogroup"] > label,
+    .st-key-turno_evolucao [role="radiogroup"] > label {
+        border: 1px solid rgba(77, 174, 176, .3); border-radius: 7px;
+        padding: 5px 10px; min-height: 36px; margin: 0;
+        cursor: pointer;
+    }
+    .st-key-secao_estatisticas label:has(input:checked),
+    .st-key-turno_evolucao label:has(input:checked) {
+        background: rgba(77, 174, 176, .14); border-color: #4daeb0;
+    }
+    .st-key-secao_estatisticas label:focus-within,
+    .st-key-turno_evolucao label:focus-within { outline: 2px solid #4daeb0; }
+    @media (max-width: 600px) {
+        .st-key-secao_estatisticas [role="radiogroup"] > label,
+        .st-key-turno_evolucao [role="radiogroup"] > label {
+            min-height: 44px;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    secao_estatisticas = st.radio(
+        "Explorar estatísticas", ["Evolução", "Desempenho", "Confrontos"],
+        horizontal=True, key="secao_estatisticas",
     )
+    if secao_estatisticas == "Evolução":
+        turno_evolucao = st.radio(
+            "Campeonato", [1, 2],
+            format_func=lambda turno: f"{turno}º turno",
+            index=1 if not ranking.empty and ranking["rodada"].max() > RODADA_CORTE_TURNO else 0,
+            horizontal=True, key="turno_evolucao",
+        )
+        exibir_subtitulo("Evolução da classificação", COR_ESTATISTICAS)
+        evolucao = montar_evolucao_classificacao(ranking, turno_evolucao)
+        if evolucao.empty:
+            st.info("Ainda não há classificação registrada para este turno.")
+        else:
+            times_evolucao = sorted(evolucao["time"].unique())
+            with st.expander("Selecionar times", expanded=False):
+                selecionados = st.multiselect(
+                    "Times no gráfico", times_evolucao, default=times_evolucao,
+                    format_func=nome_completo, key="times_evolucao",
+                )
+            st.caption("Posição por rodada do Brasileirão · 1º lugar no topo · Rodadas duplas consolidadas")
+            if selecionados:
+                dados_grafico = evolucao[evolucao["time"].isin(selecionados)].copy()
+                dados_grafico["nome"] = dados_grafico["time"].map(nome_completo)
+                # Quebras por palavras preservam os nomes sem reservar uma faixa excessiva.
+                dados_grafico["rotulo_mobile"] = dados_grafico["nome"].map(
+                    lambda nome: fill(nome, width=22, break_long_words=False, break_on_hyphens=False)
+                )
+                dados_grafico["rotulo_desktop"] = dados_grafico["nome"].map(
+                    lambda nome: fill(nome, width=30, break_long_words=False, break_on_hyphens=False)
+                )
+                st.vega_lite_chart(
+                    dados_grafico,
+                    montar_spec_evolucao(evolucao, times_evolucao, nome_completo),
+                    use_container_width=True,
+                )
+                with st.expander("Consultar posições e pontos"):
+                    st.caption("No celular, consulte aqui os detalhes de cada rodada.")
+                    rodada_detalhe = st.selectbox(
+                        "Rodada", sorted(evolucao["rodada"].unique(), reverse=True),
+                        key="rodada_detalhe_evolucao",
+                    )
+                    detalhes = dados_grafico[dados_grafico["rodada"] == rodada_detalhe]
+                    st.dataframe(
+                        detalhes[["posicao", "nome", "pontos", "situacao"]].rename(
+                            columns={"posicao": "Posição", "nome": "Time", "pontos": "Pontos", "situacao": "Situação"}
+                        ), hide_index=True, use_container_width=True,
+                    )
+                if not evolucao["definitivo"].all():
+                    st.caption("Rodadas parciais estão identificadas nos detalhes dos pontos e podem mudar.")
+            else:
+                st.info("Selecione pelo menos um time para visualizar sua trajetória.")
 
-    top3_por_rodada = calcular_top_n_por_rodada(resultados, n=3)
-    exibir_ranking_titulos(
-        top3_por_rodada,
-        COR_ESTATISTICAS_TOP3,
-        titulo="Mais vezes no Top 3 da rodada",
-        nomes_longos=True,
-    )
-
-    top5_mas_nao_venceu = calcular_top_n_mas_nao_venceu(resultados, n=5)
-    exibir_ranking_titulos(
-        top5_mas_nao_venceu,
-        COR_ESTATISTICAS_TOP5,
-        titulo="Mais vezes top 5 da rodada, mas perdeu ou empatou na Liga",
-        nomes_longos=True,
-    )
-
-    top1_mas_empatou = calcular_maior_pontuador_mas_empatou(resultados)
-    exibir_ranking_titulos(
-        top1_mas_empatou,
-        COR_ESTATISTICAS_EMPATE_LIDER,
-        titulo="Mais vezes líder da rodada, mas empatou na Liga",
-        nomes_longos=True,
-    )
+    else:
+        st.caption("Temporada 2026 · Ambos os turnos · Inclui resultados parciais registrados")
+        if secao_estatisticas == "Desempenho":
+            indicadores = {
+                "Maior pontuador": (calcular_lideres_por_rodada, COR_ESTATISTICAS_LIDER, "Mais vezes maior pontuador da rodada"),
+                "Top 3": (lambda dados: calcular_top_n_por_rodada(dados, n=3), COR_ESTATISTICAS_TOP3, "Mais vezes no Top 3 da rodada"),
+            }
+        else:
+            indicadores = {
+                "Top 5 sem vitória": (lambda dados: calcular_top_n_mas_nao_venceu(dados, n=5), COR_ESTATISTICAS_TOP5, "Mais vezes top 5 da rodada, mas perdeu ou empatou na Liga"),
+                "Líder com empate": (calcular_maior_pontuador_mas_empatou, COR_ESTATISTICAS_EMPATE_LIDER, "Mais vezes líder da rodada, mas empatou na Liga"),
+            }
+        indicador = st.selectbox("Indicador", list(indicadores), key=f"indicador_{secao_estatisticas}")
+        calcular, cor, titulo = indicadores[indicador]
+        ocorrencias = calcular(resultados)
+        if ocorrencias:
+            exibir_ranking_titulos(ocorrencias, cor, titulo=titulo, nomes_longos=True)
+        else:
+            st.info("Nenhuma ocorrência registrada para este indicador.")
 
 elif aba_atual == "regras":
     exibir_cabecalho_secao("Regras", COR_REGRAS)
