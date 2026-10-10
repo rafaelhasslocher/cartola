@@ -1,6 +1,6 @@
-from textwrap import fill
 import os
 import time
+from textwrap import fill
 
 import pandas as pd
 import streamlit as st
@@ -28,7 +28,8 @@ from copa.logica import (
 )
 from dados.persistencia import carregar_pontuacoes, obter_ranking, obter_resultados
 from liga.evolucao import (
-    montar_evolucao_classificacao, montar_spec_evolucao,
+    montar_evolucao_classificacao,
+    montar_spec_evolucao,
 )
 from regras_liga import MARGEM_EMPATE, RODADA_CORTE_TURNO
 from times import nome_completo
@@ -1592,18 +1593,6 @@ elif aba_atual == "estatisticas":
                     montar_spec_evolucao(evolucao, times_evolucao, nome_completo),
                     use_container_width=True,
                 )
-                with st.expander("Consultar posições e pontos"):
-                    st.caption("No celular, consulte aqui os detalhes de cada rodada.")
-                    rodada_detalhe = st.selectbox(
-                        "Rodada", sorted(evolucao["rodada"].unique(), reverse=True),
-                        key="rodada_detalhe_evolucao",
-                    )
-                    detalhes = dados_grafico[dados_grafico["rodada"] == rodada_detalhe]
-                    st.dataframe(
-                        detalhes[["posicao", "nome", "pontos", "situacao"]].rename(
-                            columns={"posicao": "Posição", "nome": "Time", "pontos": "Pontos", "situacao": "Situação"}
-                        ), hide_index=True, use_container_width=True,
-                    )
                 if not evolucao["definitivo"].all():
                     st.caption("Rodadas parciais estão identificadas nos detalhes dos pontos e podem mudar.")
             else:
