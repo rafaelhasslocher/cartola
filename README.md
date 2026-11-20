@@ -1,13 +1,31 @@
 # Cartola — Djamba Feipa
 
-Aplicação Streamlit para acompanhamento da Liga e da Copa.
+Aplicação Streamlit e scripts CLI para acompanhamento da Liga e da Copa.
 
 ## Execução
 
-Na raiz do projeto, com as dependências instaladas:
+Na raiz do projeto, com as dependências instaladas (`uv sync`):
 
 ```bash
 uv run streamlit run src/app.py
+```
+
+### Atualização de rodadas
+
+```bash
+uv run python src/atualizar_rodada.py               # detecta rodada e modo via API do Cartola
+uv run python src/atualizar_rodada.py 35 --parcial  # coleta pontuação ao vivo da rodada 35
+uv run python src/atualizar_rodada.py 35            # grava pontuação definitiva da rodada 35
+```
+
+As pontuações ficam em `data/<ano>/pontuacoes.csv` e as configurações da temporada
+(times, regras, calendário da Liga e chaves da Copa) em `config/<ano>/`. Liga, Copa e
+estatísticas são calculadas em memória a partir dessa fonte única.
+
+### Testes
+
+```bash
+uv run pytest
 ```
 
 ## Evolução da classificação
@@ -19,8 +37,8 @@ de participantes. O turno mais recente com dados é selecionado inicialmente.
 - Eixo horizontal: rodada do Brasileirão, apenas com classificações registradas.
 - Eixo vertical: posição na Liga, com o 1º lugar no topo e o 12º na base.
 - Rodadas duplas aparecem uma única vez, após considerar todos os confrontos.
-- As posições seguem os snapshots de `ranking_liga`: pontos na Liga e pontuação
-  acumulada, em ordem decrescente, como na tabela da Liga.
+- As posições seguem os snapshots da classificação por rodada: pontos na Liga e
+  pontuação acumulada, em ordem decrescente, como na tabela da Liga.
 - Selecionar menos times não recalcula suas posições.
 - Os detalhes de cada ponto mostram time, rodada, posição, pontos na Liga,
   pontuação acumulada e situação parcial ou definitiva.
@@ -28,8 +46,9 @@ de participantes. O turno mais recente com dados é selecionado inicialmente.
 - Não são criadas posições iniciais fictícias nem pontos para rodadas futuras.
 
 O preparo dos dados e a especificação do gráfico ficam em
-`src/liga/evolucao.py`; os controles e a exibição ficam em `src/app.py`.
-O gráfico usa o suporte Vega-Lite do Streamlit, sem novas dependências.
+`src/liga/evolucao.py`; os controles e a exibição ficam em
+`src/paginas/estatisticas.py`. O gráfico usa o suporte Vega-Lite do Streamlit,
+sem novas dependências.
 
 ## Organização da aba Estatísticas
 
@@ -43,8 +62,6 @@ O gráfico usa o suporte Vega-Lite do Streamlit, sem novas dependências.
   fim dele coincide com a borda direita da caixa (folga de 2 px para que
   nenhum navegador corte o último caractere). Ao filtrar times, a faixa se
   ajusta aos nomes que restaram.
-  A consulta de posições e pontos por rodada permite ler detalhes no celular
-  sem depender de passar o mouse sobre o gráfico.
 - **Desempenho**: seletor entre maior pontuador e Top 3.
 - **Confrontos**: seletor entre Top 5 sem vitória e líder com empate.
 

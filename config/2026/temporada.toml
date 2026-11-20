@@ -1,0 +1,139 @@
+[geral]
+ano = 2026
+titulo = "Cartola Djamba Feipa"
+
+[liga]
+margem_empate = 2.0
+rodada_corte_turno = 19
+pontos_vitoria = 3
+pontos_empate = 1
+pontos_derrota = 0
+
+[[times]]
+id = 11659945
+nome = "CAIO JÚNIOR F.C. ®️"
+jogador = "Rafa"
+
+[[times]]
+id = 20987264
+nome = "Ansiedade Prime FC"
+jogador = "Gui"
+
+[[times]]
+id = 50236495
+nome = "Baguetty e os perus"
+jogador = "Camilla"
+
+[[times]]
+id = 4626226
+nome = "Pigeon Boiteux OSC"
+jogador = "PV"
+
+[[times]]
+id = 3394005
+nome = "GARANTES"
+jogador = "Garantes"
+
+[[times]]
+id = 13986579
+nome = "Arãcanela F.C."
+jogador = "Feijó"
+
+[[times]]
+id = 50285685
+nome = "Travesseiros confortáveis FC"
+jogador = "Bruna"
+
+[[times]]
+id = 12054764
+nome = "Kyrolina FC"
+jogador = "Renata"
+
+[[times]]
+id = 11727630
+nome = "São Janumário FC"
+jogador = "Mario"
+
+[[times]]
+id = 256207
+nome = "Paquetetra"
+jogador = "Hammes"
+
+[[times]]
+id = 11958779
+nome = "Club silencio"
+jogador = "Ruy"
+
+[[times]]
+id = 49230944
+nome = "Inhames"
+jogador = "Ian"
+
+# Copa — intervalos de rodadas são inclusivos: [inicio, fim].
+# times_fora são o campeão (fora_1) e o vice (fora_2) da Copa anterior.
+
+[copa.temporadas.1]
+times_fora = ["CAIO JÚNIOR F.C. ®️", "Inhames"]
+chave_quartas = [
+    ["fora_1", "fora_2"],
+    ["1_grupo_b", "1_grupo_a"],
+    ["2_grupo_a", "2_grupo_b"],
+    ["3_grupo_a", "3_grupo_b"],
+]
+chave_semi = [[0, 3], [1, 2]]
+chave_final = [[0, 1]]
+
+[copa.temporadas.1.fases]
+fase_de_grupos = [2, 6]
+quartas = [10, 12]
+semi = [13, 15]
+final = [16, 18]
+
+[copa.temporadas.1.grupos]
+grupo_a = [
+    "Pigeon Boiteux OSC",
+    "Baguetty e os perus",
+    "Kyrolina FC",
+    "Club silencio",
+    "Paquetetra",
+]
+grupo_b = [
+    "Ansiedade Prime FC",
+    "GARANTES",
+    "Arãcanela F.C.",
+    "Travesseiros confortáveis FC",
+    "São Janumário FC",
+]
+
+[copa.temporadas.2]
+times_fora = ["Ansiedade Prime FC", "Kyrolina FC"]
+chave_quartas = [
+    ["1_grupo_a", "2_grupo_b"],
+    ["1_grupo_b", "2_grupo_a"],
+    ["fora_1", "3_grupo_a"],
+    ["fora_2", "3_grupo_b"],
+]
+chave_semi = [[0, 1], [2, 3]]
+chave_final = [[0, 1]]
+
+[copa.temporadas.2.fases]
+fase_de_grupos = [22, 26]
+quartas = [30, 32]
+semi = [33, 35]
+final = [36, 38]
+
+[copa.temporadas.2.grupos]
+grupo_a = [
+    "CAIO JÚNIOR F.C. ®️",
+    "Baguetty e os perus",
+    "Arãcanela F.C.",
+    "Inhames",
+    "São Janumário FC",
+]
+grupo_b = [
+    "Pigeon Boiteux OSC",
+    "GARANTES",
+    "Travesseiros confortáveis FC",
+    "Paquetetra",
+    "Club silencio",
+]

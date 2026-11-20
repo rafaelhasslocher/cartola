@@ -1,21 +1,41 @@
 import numpy as np
 import pandas as pd
 
-from regras_liga import (
-    MARGEM_EMPATE,
-    PONTOS_DERROTA,
-    PONTOS_EMPATE,
-    PONTOS_VITORIA,
-    RODADA_CORTE_TURNO,
-)
+
+def turno_da_rodada(rodada_brasileirao, rodada_corte_turno=19):
+    return 1 if rodada_brasileirao <= rodada_corte_turno else 2
 
 
-def montar_tabela_resultados(confrontos, pontuacoes):
-    df = pd.DataFrame(confrontos)
+def construir_offsets_rodada_liga(confrontos, rodada_corte_turno=19):
+    """A `rodada_liga` no calendário é acumulada desde o início do campeonato.
+    Calcula quanto subtrair dela em cada turno para reiniciar a contagem em 1.
+    """
+    df = confrontos if isinstance(confrontos, pd.DataFrame) else pd.DataFrame(confrontos)
+    turnos = np.where(df["rodada_brasileirao"] <= rodada_corte_turno, 1, 2)
+    minimos = df.groupby(turnos)["rodada_liga"].min()
+    return {int(turno): int(minimo) - 1 for turno, minimo in minimos.items()}
+
+
+def rodada_liga_relativa(rodada_liga, turno, offsets):
+    return int(rodada_liga) - offsets.get(turno, 0)
+
+
+def montar_tabela_resultados(confrontos, pontuacoes, regras):
+    df = (
+        confrontos.copy()
+        if isinstance(confrontos, pd.DataFrame)
+        else pd.DataFrame(confrontos)
+    )
+
+    pts = pontuacoes[["nome_time", "rodada", "pontuacao", "definitivo"]]
 
     df = df.merge(
-        pontuacoes.rename(
-            columns={"nome_time": "time1", "pontuacao": "pontuacao_time1"}
+        pts.rename(
+            columns={
+                "nome_time": "time1",
+                "pontuacao": "pontuacao_time1",
+                "definitivo": "definitivo_1",
+            }
         ),
         left_on=["time1", "rodada_brasileirao"],
         right_on=["time1", "rodada"],
@@ -23,7 +43,7 @@ def montar_tabela_resultados(confrontos, pontuacoes):
     ).drop(columns="rodada")
 
     df = df.merge(
-        pontuacoes.rename(
+        pts[["nome_time", "rodada", "pontuacao"]].rename(
             columns={"nome_time": "time2", "pontuacao": "pontuacao_time2"}
         ),
         left_on=["time2", "rodada_brasileirao"],
@@ -31,7 +51,25 @@ def montar_tabela_resultados(confrontos, pontuacoes):
         how="left",
     ).drop(columns="rodada")
 
-    df = df.dropna(subset=["pontuacao_time1", "pontuacao_time2"])
+    df = df.dropna(subset=["pontuacao_time1", "pontuacao_time2"]).copy()
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                "rodada_brasileirao",
+                "rodada_liga",
+                "time1",
+                "time2",
+                "vencedor",
+                "perdedor",
+                "pontuacao_time1",
+                "pontuacao_time2",
+                "diferenca_pontos",
+                "pontos_vencedor",
+                "pontos_perdedor",
+                "turno",
+                "definitivo",
+            ]
+        )
 
     time1_venceu = df["pontuacao_time1"] >= df["pontuacao_time2"]
 
@@ -41,11 +79,14 @@ def montar_tabela_resultados(confrontos, pontuacoes):
         (df["pontuacao_time1"] - df["pontuacao_time2"]).abs().round(2)
     )
 
-    empate = df["diferenca_pontos"] < MARGEM_EMPATE
-    df["pontos_vencedor"] = np.where(empate, PONTOS_EMPATE, PONTOS_VITORIA)
-    df["pontos_perdedor"] = np.where(empate, PONTOS_EMPATE, PONTOS_DERROTA)
+    empate = df["diferenca_pontos"] < regras.margem_empate
+    df["pontos_vencedor"] = np.where(empate, regras.pontos_empate, regras.pontos_vitoria)
+    df["pontos_perdedor"] = np.where(empate, regras.pontos_empate, regras.pontos_derrota)
 
-    df["turno"] = np.where(df["rodada_brasileirao"] <= RODADA_CORTE_TURNO, 1, 2)
+    df["turno"] = np.where(
+        df["rodada_brasileirao"] <= regras.rodada_corte_turno, 1, 2
+    )
+    df["definitivo"] = df["definitivo_1"].astype("boolean").fillna(True).astype(bool)
 
     return df[
         [
@@ -61,6 +102,7 @@ def montar_tabela_resultados(confrontos, pontuacoes):
             "pontos_vencedor",
             "pontos_perdedor",
             "turno",
+            "definitivo",
         ]
     ]
 
@@ -113,6 +155,29 @@ def montar_ranking_final(tabela_resultados, rodada, definitivo=True):
     return ranking.sort_values(
         by=["turno", "pontos", "pontuacao_total"], ascending=False
     ).reset_index(drop=True)
+
+
+def montar_ranking_todas_rodadas(tabela_resultados):
+    """Monta os snapshots de classificação acumulada para todas as rodadas registradas."""
+    if tabela_resultados.empty:
+        return pd.DataFrame(
+            columns=["time", "turno", "pontos", "pontuacao_total", "rodada", "definitivo"]
+        )
+
+    definitivo_por_rodada = (
+        tabela_resultados.groupby("rodada_brasileirao")["definitivo"].all().to_dict()
+    )
+    snapshots = []
+    for rodada in sorted(int(r) for r in tabela_resultados["rodada_brasileirao"].unique()):
+        ate_rodada = tabela_resultados[
+            tabela_resultados["rodada_brasileirao"] <= rodada
+        ]
+        snapshots.append(
+            montar_ranking_final(
+                ate_rodada, rodada, definitivo=bool(definitivo_por_rodada.get(rodada, True))
+            )
+        )
+    return pd.concat(snapshots, ignore_index=True)
 
 
 def exibir_resultados(df_final, turno=None):

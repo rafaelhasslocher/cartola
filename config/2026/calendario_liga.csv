@@ -1,0 +1,265 @@
+rodada_brasileirao,rodada_liga,time1,time2
+1,1,CAIO JÚNIOR F.C. ®️,Pigeon Boiteux OSC
+1,1,Arãcanela F.C.,Inhames
+1,1,Ansiedade Prime FC,Paquetetra
+1,1,Baguetty e os perus,São Janumário FC
+1,1,Kyrolina FC,Travesseiros confortáveis FC
+1,1,Club silencio,GARANTES
+2,2,CAIO JÚNIOR F.C. ®️,Arãcanela F.C.
+2,2,Ansiedade Prime FC,Pigeon Boiteux OSC
+2,2,Baguetty e os perus,Inhames
+2,2,Kyrolina FC,Paquetetra
+2,2,Club silencio,São Janumário FC
+2,2,GARANTES,Travesseiros confortáveis FC
+3,3,CAIO JÚNIOR F.C. ®️,Ansiedade Prime FC
+3,3,Baguetty e os perus,Arãcanela F.C.
+3,3,Kyrolina FC,Pigeon Boiteux OSC
+3,3,Club silencio,Inhames
+3,3,GARANTES,Paquetetra
+3,3,Travesseiros confortáveis FC,São Janumário FC
+4,4,CAIO JÚNIOR F.C. ®️,Baguetty e os perus
+4,4,Kyrolina FC,Ansiedade Prime FC
+4,4,Club silencio,Arãcanela F.C.
+4,4,GARANTES,Pigeon Boiteux OSC
+4,4,Travesseiros confortáveis FC,Inhames
+4,4,São Janumário FC,Paquetetra
+5,5,CAIO JÚNIOR F.C. ®️,Kyrolina FC
+5,5,Club silencio,Baguetty e os perus
+5,5,GARANTES,Ansiedade Prime FC
+5,5,Travesseiros confortáveis FC,Arãcanela F.C.
+5,5,São Janumário FC,Pigeon Boiteux OSC
+5,5,Paquetetra,Inhames
+6,6,CAIO JÚNIOR F.C. ®️,Club silencio
+6,6,GARANTES,Kyrolina FC
+6,6,Travesseiros confortáveis FC,Baguetty e os perus
+6,6,São Janumário FC,Ansiedade Prime FC
+6,6,Paquetetra,Arãcanela F.C.
+6,6,Inhames,Pigeon Boiteux OSC
+7,7,CAIO JÚNIOR F.C. ®️,GARANTES
+7,7,Travesseiros confortáveis FC,Club silencio
+7,7,São Janumário FC,Kyrolina FC
+7,7,Paquetetra,Baguetty e os perus
+7,7,Inhames,Ansiedade Prime FC
+7,7,Pigeon Boiteux OSC,Arãcanela F.C.
+7,8,CAIO JÚNIOR F.C. ®️,Travesseiros confortáveis FC
+7,8,São Janumário FC,GARANTES
+7,8,Paquetetra,Club silencio
+7,8,Inhames,Kyrolina FC
+7,8,Pigeon Boiteux OSC,Baguetty e os perus
+7,8,Arãcanela F.C.,Ansiedade Prime FC
+8,9,CAIO JÚNIOR F.C. ®️,São Janumário FC
+8,9,Paquetetra,Travesseiros confortáveis FC
+8,9,Inhames,GARANTES
+8,9,Pigeon Boiteux OSC,Club silencio
+8,9,Arãcanela F.C.,Kyrolina FC
+8,9,Ansiedade Prime FC,Baguetty e os perus
+8,10,CAIO JÚNIOR F.C. ®️,Paquetetra
+8,10,Inhames,São Janumário FC
+8,10,Pigeon Boiteux OSC,Travesseiros confortáveis FC
+8,10,Arãcanela F.C.,GARANTES
+8,10,Ansiedade Prime FC,Club silencio
+8,10,Baguetty e os perus,Kyrolina FC
+9,11,CAIO JÚNIOR F.C. ®️,Inhames
+9,11,Pigeon Boiteux OSC,Paquetetra
+9,11,Arãcanela F.C.,São Janumário FC
+9,11,Ansiedade Prime FC,Travesseiros confortáveis FC
+9,11,Baguetty e os perus,GARANTES
+9,11,Kyrolina FC,Club silencio
+9,12,Pigeon Boiteux OSC,CAIO JÚNIOR F.C. ®️
+9,12,Inhames,Arãcanela F.C.
+9,12,Paquetetra,Ansiedade Prime FC
+9,12,São Janumário FC,Baguetty e os perus
+9,12,Travesseiros confortáveis FC,Kyrolina FC
+9,12,GARANTES,Club silencio
+10,13,Arãcanela F.C.,CAIO JÚNIOR F.C. ®️
+10,13,Pigeon Boiteux OSC,Ansiedade Prime FC
+10,13,Inhames,Baguetty e os perus
+10,13,Paquetetra,Kyrolina FC
+10,13,São Janumário FC,Club silencio
+10,13,Travesseiros confortáveis FC,GARANTES
+11,14,Ansiedade Prime FC,CAIO JÚNIOR F.C. ®️
+11,14,Arãcanela F.C.,Baguetty e os perus
+11,14,Pigeon Boiteux OSC,Kyrolina FC
+11,14,Inhames,Club silencio
+11,14,Paquetetra,GARANTES
+11,14,São Janumário FC,Travesseiros confortáveis FC
+12,15,Baguetty e os perus,CAIO JÚNIOR F.C. ®️
+12,15,Ansiedade Prime FC,Kyrolina FC
+12,15,Arãcanela F.C.,Club silencio
+12,15,Pigeon Boiteux OSC,GARANTES
+12,15,Inhames,Travesseiros confortáveis FC
+12,15,Paquetetra,São Janumário FC
+13,16,Kyrolina FC,CAIO JÚNIOR F.C. ®️
+13,16,Baguetty e os perus,Club silencio
+13,16,Ansiedade Prime FC,GARANTES
+13,16,Arãcanela F.C.,Travesseiros confortáveis FC
+13,16,Pigeon Boiteux OSC,São Janumário FC
+13,16,Inhames,Paquetetra
+14,17,Club silencio,CAIO JÚNIOR F.C. ®️
+14,17,Kyrolina FC,GARANTES
+14,17,Baguetty e os perus,Travesseiros confortáveis FC
+14,17,Ansiedade Prime FC,São Janumário FC
+14,17,Arãcanela F.C.,Paquetetra
+14,17,Pigeon Boiteux OSC,Inhames
+15,18,GARANTES,CAIO JÚNIOR F.C. ®️
+15,18,Club silencio,Travesseiros confortáveis FC
+15,18,Kyrolina FC,São Janumário FC
+15,18,Baguetty e os perus,Paquetetra
+15,18,Ansiedade Prime FC,Inhames
+15,18,Arãcanela F.C.,Pigeon Boiteux OSC
+16,19,Travesseiros confortáveis FC,CAIO JÚNIOR F.C. ®️
+16,19,GARANTES,São Janumário FC
+16,19,Club silencio,Paquetetra
+16,19,Kyrolina FC,Inhames
+16,19,Baguetty e os perus,Pigeon Boiteux OSC
+16,19,Ansiedade Prime FC,Arãcanela F.C.
+17,20,São Janumário FC,CAIO JÚNIOR F.C. ®️
+17,20,Travesseiros confortáveis FC,Paquetetra
+17,20,GARANTES,Inhames
+17,20,Club silencio,Pigeon Boiteux OSC
+17,20,Kyrolina FC,Arãcanela F.C.
+17,20,Baguetty e os perus,Ansiedade Prime FC
+18,21,Paquetetra,CAIO JÚNIOR F.C. ®️
+18,21,São Janumário FC,Inhames
+18,21,Travesseiros confortáveis FC,Pigeon Boiteux OSC
+18,21,GARANTES,Arãcanela F.C.
+18,21,Club silencio,Ansiedade Prime FC
+18,21,Kyrolina FC,Baguetty e os perus
+19,22,Inhames,CAIO JÚNIOR F.C. ®️
+19,22,Paquetetra,Pigeon Boiteux OSC
+19,22,São Janumário FC,Arãcanela F.C.
+19,22,Travesseiros confortáveis FC,Ansiedade Prime FC
+19,22,GARANTES,Baguetty e os perus
+19,22,Club silencio,Kyrolina FC
+20,23,CAIO JÚNIOR F.C. ®️,Pigeon Boiteux OSC
+20,23,Arãcanela F.C.,Inhames
+20,23,Ansiedade Prime FC,Paquetetra
+20,23,Baguetty e os perus,São Janumário FC
+20,23,Kyrolina FC,Travesseiros confortáveis FC
+20,23,Club silencio,GARANTES
+21,24,CAIO JÚNIOR F.C. ®️,Arãcanela F.C.
+21,24,Ansiedade Prime FC,Pigeon Boiteux OSC
+21,24,Baguetty e os perus,Inhames
+21,24,Kyrolina FC,Paquetetra
+21,24,Club silencio,São Janumário FC
+21,24,GARANTES,Travesseiros confortáveis FC
+22,25,CAIO JÚNIOR F.C. ®️,Ansiedade Prime FC
+22,25,Baguetty e os perus,Arãcanela F.C.
+22,25,Kyrolina FC,Pigeon Boiteux OSC
+22,25,Club silencio,Inhames
+22,25,GARANTES,Paquetetra
+22,25,Travesseiros confortáveis FC,São Janumário FC
+23,26,CAIO JÚNIOR F.C. ®️,Baguetty e os perus
+23,26,Kyrolina FC,Ansiedade Prime FC
+23,26,Club silencio,Arãcanela F.C.
+23,26,GARANTES,Pigeon Boiteux OSC
+23,26,Travesseiros confortáveis FC,Inhames
+23,26,São Janumário FC,Paquetetra
+24,27,CAIO JÚNIOR F.C. ®️,Kyrolina FC
+24,27,Club silencio,Baguetty e os perus
+24,27,GARANTES,Ansiedade Prime FC
+24,27,Travesseiros confortáveis FC,Arãcanela F.C.
+24,27,São Janumário FC,Pigeon Boiteux OSC
+24,27,Paquetetra,Inhames
+25,28,CAIO JÚNIOR F.C. ®️,Club silencio
+25,28,GARANTES,Kyrolina FC
+25,28,Travesseiros confortáveis FC,Baguetty e os perus
+25,28,São Janumário FC,Ansiedade Prime FC
+25,28,Paquetetra,Arãcanela F.C.
+25,28,Inhames,Pigeon Boiteux OSC
+26,29,CAIO JÚNIOR F.C. ®️,GARANTES
+26,29,Travesseiros confortáveis FC,Club silencio
+26,29,São Janumário FC,Kyrolina FC
+26,29,Paquetetra,Baguetty e os perus
+26,29,Inhames,Ansiedade Prime FC
+26,29,Pigeon Boiteux OSC,Arãcanela F.C.
+27,30,CAIO JÚNIOR F.C. ®️,Travesseiros confortáveis FC
+27,30,São Janumário FC,GARANTES
+27,30,Paquetetra,Club silencio
+27,30,Inhames,Kyrolina FC
+27,30,Pigeon Boiteux OSC,Baguetty e os perus
+27,30,Arãcanela F.C.,Ansiedade Prime FC
+27,31,CAIO JÚNIOR F.C. ®️,São Janumário FC
+27,31,Paquetetra,Travesseiros confortáveis FC
+27,31,Inhames,GARANTES
+27,31,Pigeon Boiteux OSC,Club silencio
+27,31,Arãcanela F.C.,Kyrolina FC
+27,31,Ansiedade Prime FC,Baguetty e os perus
+28,32,CAIO JÚNIOR F.C. ®️,Paquetetra
+28,32,Inhames,São Janumário FC
+28,32,Pigeon Boiteux OSC,Travesseiros confortáveis FC
+28,32,Arãcanela F.C.,GARANTES
+28,32,Ansiedade Prime FC,Club silencio
+28,32,Baguetty e os perus,Kyrolina FC
+28,33,CAIO JÚNIOR F.C. ®️,Inhames
+28,33,Pigeon Boiteux OSC,Paquetetra
+28,33,Arãcanela F.C.,São Janumário FC
+28,33,Ansiedade Prime FC,Travesseiros confortáveis FC
+28,33,Baguetty e os perus,GARANTES
+28,33,Kyrolina FC,Club silencio
+29,34,Pigeon Boiteux OSC,CAIO JÚNIOR F.C. ®️
+29,34,Inhames,Arãcanela F.C.
+29,34,Paquetetra,Ansiedade Prime FC
+29,34,São Janumário FC,Baguetty e os perus
+29,34,Travesseiros confortáveis FC,Kyrolina FC
+29,34,GARANTES,Club silencio
+29,35,Arãcanela F.C.,CAIO JÚNIOR F.C. ®️
+29,35,Pigeon Boiteux OSC,Ansiedade Prime FC
+29,35,Inhames,Baguetty e os perus
+29,35,Paquetetra,Kyrolina FC
+29,35,São Janumário FC,Club silencio
+29,35,Travesseiros confortáveis FC,GARANTES
+30,36,Ansiedade Prime FC,CAIO JÚNIOR F.C. ®️
+30,36,Arãcanela F.C.,Baguetty e os perus
+30,36,Pigeon Boiteux OSC,Kyrolina FC
+30,36,Inhames,Club silencio
+30,36,Paquetetra,GARANTES
+30,36,São Janumário FC,Travesseiros confortáveis FC
+31,37,Baguetty e os perus,CAIO JÚNIOR F.C. ®️
+31,37,Ansiedade Prime FC,Kyrolina FC
+31,37,Arãcanela F.C.,Club silencio
+31,37,Pigeon Boiteux OSC,GARANTES
+31,37,Inhames,Travesseiros confortáveis FC
+31,37,Paquetetra,São Janumário FC
+32,38,Kyrolina FC,CAIO JÚNIOR F.C. ®️
+32,38,Baguetty e os perus,Club silencio
+32,38,Ansiedade Prime FC,GARANTES
+32,38,Arãcanela F.C.,Travesseiros confortáveis FC
+32,38,Pigeon Boiteux OSC,São Janumário FC
+32,38,Inhames,Paquetetra
+33,39,Club silencio,CAIO JÚNIOR F.C. ®️
+33,39,Kyrolina FC,GARANTES
+33,39,Baguetty e os perus,Travesseiros confortáveis FC
+33,39,Ansiedade Prime FC,São Janumário FC
+33,39,Arãcanela F.C.,Paquetetra
+33,39,Pigeon Boiteux OSC,Inhames
+34,40,GARANTES,CAIO JÚNIOR F.C. ®️
+34,40,Club silencio,Travesseiros confortáveis FC
+34,40,Kyrolina FC,São Janumário FC
+34,40,Baguetty e os perus,Paquetetra
+34,40,Ansiedade Prime FC,Inhames
+34,40,Arãcanela F.C.,Pigeon Boiteux OSC
+35,41,Travesseiros confortáveis FC,CAIO JÚNIOR F.C. ®️
+35,41,GARANTES,São Janumário FC
+35,41,Club silencio,Paquetetra
+35,41,Kyrolina FC,Inhames
+35,41,Baguetty e os perus,Pigeon Boiteux OSC
+35,41,Ansiedade Prime FC,Arãcanela F.C.
+36,42,São Janumário FC,CAIO JÚNIOR F.C. ®️
+36,42,Travesseiros confortáveis FC,Paquetetra
+36,42,GARANTES,Inhames
+36,42,Club silencio,Pigeon Boiteux OSC
+36,42,Kyrolina FC,Arãcanela F.C.
+36,42,Baguetty e os perus,Ansiedade Prime FC
+37,43,Paquetetra,CAIO JÚNIOR F.C. ®️
+37,43,São Janumário FC,Inhames
+37,43,Travesseiros confortáveis FC,Pigeon Boiteux OSC
+37,43,GARANTES,Arãcanela F.C.
+37,43,Club silencio,Ansiedade Prime FC
+37,43,Kyrolina FC,Baguetty e os perus
+38,44,Inhames,CAIO JÚNIOR F.C. ®️
+38,44,Paquetetra,Pigeon Boiteux OSC
+38,44,São Janumário FC,Arãcanela F.C.
+38,44,Travesseiros confortáveis FC,Ansiedade Prime FC
+38,44,GARANTES,Baguetty e os perus
+38,44,Club silencio,Kyrolina FC

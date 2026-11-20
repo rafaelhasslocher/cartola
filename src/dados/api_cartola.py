@@ -1,59 +1,76 @@
+from concurrent.futures import ThreadPoolExecutor
+
 import pandas as pd
 import requests
-from deltalake.exceptions import TableNotFoundError
 
-from dados.persistencia import ler_tabela_delta
-
+URL_BASE_API = "https://api.cartola.globo.com"
 MULTIPLICADOR_CAPITAO = 1.5
+TIMEOUT_REQUISICAO = 10
+MAX_WORKERS = 6
 
 
-def get_pontuacao_time(id_time, rodada):
-    url = f"https://api.cartola.globo.com/time/id/{id_time}/{rodada}"
+def consultar_status_mercado(sessao=None):
+    """Consulta `/mercado/status` para descobrir a rodada atual e o status do mercado.
+
+    Códigos comuns de `status_mercado`:
+    - 1: mercado aberto (rodada anterior já fechou);
+    - 2: mercado fechado (rodada em andamento).
+    """
+    cliente = sessao or requests
+    resp = cliente.get(f"{URL_BASE_API}/mercado/status", timeout=TIMEOUT_REQUISICAO)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_pontuacao_time(id_time, rodada, sessao=None):
+    cliente = sessao or requests
+    url = f"{URL_BASE_API}/time/id/{id_time}/{rodada}"
     try:
-        resp = requests.get(url, timeout=10)
+        resp = cliente.get(url, timeout=TIMEOUT_REQUISICAO)
     except requests.RequestException as e:
         print(f"[AVISO] Falha ao consultar time {id_time} na rodada {rodada}: {e}")
         return None
     if resp.status_code == 200:
-        data = resp.json()
-        return data.get("pontos", None)
+        return resp.json().get("pontos", None)
     print(f"[AVISO] Status {resp.status_code} para time {id_time} na rodada {rodada}")
     return None
 
 
 def coletar_pontuacoes(ids_times, rodadas):
-    dados = []
-    for id_time in ids_times:
-        for rodada in rodadas:
-            pontos = get_pontuacao_time(id_time, rodada)
-            if pontos is not None:
-                dados.append(
-                    {
-                        "id_time": id_time,
-                        "rodada": rodada,
-                        "pontuacao": round(pontos, 2),
-                    }
+    tarefas = [(id_time, rodada) for id_time in ids_times for rodada in rodadas]
+    with requests.Session() as sessao:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            pontos_lista = list(
+                pool.map(
+                    lambda par: get_pontuacao_time(par[0], par[1], sessao=sessao),
+                    tarefas,
                 )
-    return dados
+            )
+
+    return [
+        {"id_time": id_time, "rodada": rodada, "pontuacao": round(pontos, 2)}
+        for (id_time, rodada), pontos in zip(tarefas, pontos_lista)
+        if pontos is not None
+    ]
 
 
-def _buscar_parciais_raw():
+def _buscar_parciais_raw(sessao=None):
     """Busca as pontuações parciais da rodada em andamento com todos os campos
     originais da API (inclusive `entrou_em_campo`), necessários para aplicar
     as regras de substituição do banco de reservas.
     """
-    url = "https://api.cartola.globo.com/atletas/pontuados"
-    resp = requests.get(url, timeout=10)
+    cliente = sessao or requests
+    resp = cliente.get(f"{URL_BASE_API}/atletas/pontuados", timeout=TIMEOUT_REQUISICAO)
     resp.raise_for_status()
     return resp.json().get("atletas", {})
 
 
-def _buscar_escalacao_raw(id_time):
+def _buscar_escalacao_raw(id_time, sessao=None):
     """Busca a escalação atual do time (titulares, reservas, capitão e
     reserva de luxo) direto na API do Cartola.
     """
-    url = f"https://api.cartola.globo.com/time/id/{id_time}"
-    resp = requests.get(url, timeout=10)
+    cliente = sessao or requests
+    resp = cliente.get(f"{URL_BASE_API}/time/id/{id_time}", timeout=TIMEOUT_REQUISICAO)
     resp.raise_for_status()
     return resp.json()
 
@@ -70,23 +87,15 @@ def _pontos_e_status_atleta(atleta_id, parciais_raw):
     return pontos, jogou
 
 
-def get_pontuacao_parcial_time(id_time, parciais):
-    """Calcula a pontuação parcial do time aplicando as regras do Cartola:
+def calcular_pontuacao_parcial_escalacao(escalacao, parciais):
+    """Aplica as regras do Cartola sobre uma escalação e o dict de parciais:
     1) se o titular não jogou, o reserva da mesma posição entra (desde que
        o reserva tenha jogado e não tenha pontuação negativa);
     2) o reserva de luxo entra se TODOS os titulares da sua posição jogaram
        e ele pontuar mais que o de menor pontuação entre eles (mesmo que a
        pontuação do reserva de luxo seja negativa);
     3) o capitão (ou quem ocupar a vaga dele) pontua x1,5.
-
-    `parciais` deve ser o dict cru retornado por `_buscar_parciais_raw()`.
     """
-    try:
-        escalacao = _buscar_escalacao_raw(id_time)
-    except requests.RequestException as e:
-        print(f"[AVISO] Falha ao calcular parcial do time {id_time}: {e}")
-        return None
-
     titulares = escalacao.get("atletas") or []
     reservas = escalacao.get("reservas") or []
     capitao_id = escalacao.get("capitao_id")
@@ -152,31 +161,42 @@ def get_pontuacao_parcial_time(id_time, parciais):
     return round(pontos_total, 2)
 
 
+def get_pontuacao_parcial_time(id_time, parciais, sessao=None):
+    try:
+        escalacao = _buscar_escalacao_raw(id_time, sessao=sessao)
+    except requests.RequestException as e:
+        print(f"[AVISO] Falha ao calcular parcial do time {id_time}: {e}")
+        return None
+    return calcular_pontuacao_parcial_escalacao(escalacao, parciais)
+
+
 def coletar_pontuacoes_parciais(ids_times, rodada):
     """Coleta a pontuação AO VIVO da rodada em andamento (mercado fechado),
     já aplicando as regras de substituição (banco + reserva de luxo) e
-    capitão. Diferente de `coletar_pontuacoes`, aqui a rodada não precisa
-    ter fechado: os pontos refletem só os jogadores que já entraram em
-    campo até o momento.
+    capitão.
     """
-    try:
-        parciais = _buscar_parciais_raw()
-    except requests.RequestException as e:
-        print(f"[AVISO] Pontuação parcial indisponível agora: {e}")
-        return []
+    with requests.Session() as sessao:
+        try:
+            parciais = _buscar_parciais_raw(sessao=sessao)
+        except requests.RequestException as e:
+            print(f"[AVISO] Pontuação parcial indisponível agora: {e}")
+            return []
 
-    dados = []
-    for id_time in ids_times:
-        pontos = get_pontuacao_parcial_time(id_time, parciais)
-        if pontos is not None:
-            dados.append(
-                {
-                    "id_time": id_time,
-                    "rodada": rodada,
-                    "pontuacao": round(pontos, 2),
-                }
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            pontos_lista = list(
+                pool.map(
+                    lambda id_time: get_pontuacao_parcial_time(
+                        id_time, parciais, sessao=sessao
+                    ),
+                    ids_times,
+                )
             )
-    return dados
+
+    return [
+        {"id_time": id_time, "rodada": rodada, "pontuacao": round(pontos, 2)}
+        for id_time, pontos in zip(ids_times, pontos_lista)
+        if pontos is not None
+    ]
 
 
 def montar_dataframe_pontuacoes(dados, id_nome_time):
@@ -196,13 +216,3 @@ def validar_cobertura(dados, ids_times, id_nome_time, rodadas):
     if faltando:
         print(f"[AVISO] Faltando pontuação para: {faltando}")
     return faltando
-
-
-def obter_ultima_rodada_registrada(caminho_dados):
-    try:
-        pontuacoes = ler_tabela_delta(caminho_dados)
-    except TableNotFoundError:
-        return 0
-    if pontuacoes.empty:
-        return 0
-    return int(pontuacoes["rodada"].max())

@@ -12,3 +12,6 @@ wheels/
 # Outras pastas
 
 auxiliar_jornal
+
+# Saídas de ferramentas/verificar_saidas.py
+.verificacao/

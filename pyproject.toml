@@ -1,15 +1,17 @@
 [project]
 name = "cartola"
 version = "0.1.0"
-description = "Add your description here"
+description = "Organização e painel dos campeonatos do Cartola FC — Djamba Feipa"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "deltalake>=1.6.3",
-    "ipykernel>=7.3.0",
     "numpy>=2.4.6",
     "pandas>=3.0.5",
-    "pyarrow>=25.0.1",
     "requests>=2.34.2",
     "streamlit>=1.38.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
 ]

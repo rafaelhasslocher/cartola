@@ -1,8 +1,5 @@
 """Trajetórias da Liga a partir dos snapshots de classificação por rodada."""
 
-from regras_liga import RODADA_CORTE_TURNO
-
-
 # Abaixo desta largura do contêiner (px) o gráfico usa os nomes quebrados em
 # linhas mais curtas. Equivale ao limite anterior (600 px de área útil mais
 # ~60 px do eixo vertical). Não pode usar `width`: a área útil agora resulta do
@@ -19,13 +16,13 @@ CORES_EVOLUCAO = [
 ]
 
 
-def montar_evolucao_classificacao(ranking, turno):
+def montar_evolucao_classificacao(ranking, turno, rodada_corte_turno=19):
     """Calcula posições antes de qualquer filtro de times, como na tabela da Liga.
 
     Snapshots do segundo turno também carregam o primeiro turno encerrado;
     estes registros não devem prolongar artificialmente sua trajetória.
     """
-    no_turno = ranking["rodada"].le(RODADA_CORTE_TURNO)
+    no_turno = ranking["rodada"].le(rodada_corte_turno)
     if turno == 2:
         no_turno = ~no_turno
     dados = ranking.loc[(ranking["turno"] == turno) & no_turno].copy()
