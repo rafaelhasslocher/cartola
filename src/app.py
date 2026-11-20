@@ -118,6 +118,7 @@ CAMPEOES_LIGA = [
     ("2025/1", "Camilla", None),
     ("2025/2", "Rafa", None),
     ("2026/1", "Gui", None),
+    ("2026/2", "Rafa", None)
 ]
 
 CAMPEOES_COPA = [
@@ -159,6 +160,7 @@ TIMES_CAMPEOES_LIGA = {
     "2025/1": "Baguetty E Os Perus",
     "2025/2": "CAIO JÚNIOR F.C. ®️",
     "2026/1": "Ansiedade Prime FC",
+    "2026/2": "CAIO JÚNIOR F.C. ®️"
 }
 
 TIMES_CAMPEOES_COPA = {
