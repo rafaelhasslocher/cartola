@@ -25,10 +25,10 @@ esse padrão.
 ## 2. Stack e execução
 
 - Python ≥ 3.11 (`.python-version`), gerenciado com **uv** (`pyproject.toml`, `uv.lock`).
-- Dependências diretas: `numpy`, `pandas`, `requests`, `streamlit` (e `pytest` em `dev`).
+- Dependências diretas: `numpy`, `pandas`, `requests`, `streamlit` (e `pytest`, `ruff` em `dev`).
   **Não adicione dependências sem pedir.**
-- Ambiente local em `.venv/` (Windows; PowerShell). Há também `.devcontainer/`
-  (Codespaces) que usa `uv sync` e roda `uv run streamlit run src/app.py` na porta 8501.
+- Ambiente local em `.venv/` (Windows; PowerShell). `.gitattributes` padroniza fins de linha em `LF`.
+  Há também `.devcontainer/` (Codespaces) que usa `uv sync` e roda `uv run streamlit run src/app.py` na porta 8501.
 
 Comandos (sempre a partir da raiz do repo):
 
@@ -38,7 +38,8 @@ uv run python src/atualizar_rodada.py               # detecta rodada e modo via 
 uv run python src/atualizar_rodada.py 35 --parcial  # rodada em andamento (ao vivo)
 uv run python src/atualizar_rodada.py 35            # rodada fechada (definitivo)
 uv run python src/estoque/estoque.py 35             # recoleta TODO o histórico 1..35 (destrutivo)
-uv run pytest                                       # testes unitários
+uv run pytest                                       # testes unitários e de integridade de dados
+uv run ruff check .                                 # lint / consistência de estilo
 uv run python ferramentas/verificar_saidas.py comparar  # compara saídas com .verificacao/referencia.json
 ```
 
@@ -134,10 +135,12 @@ auxiliar_jornal/            # (gitignored) briefing/manual para gerar a "capa de
   `chave_semi` e `chave_final` usam índices dos vencedores da fase anterior.
 - **Mata-mata**: soma das pontuações brutas das rodadas da fase; maior soma vence.
   Empate exato favorece `time1` (`>=`). Não há margem de empate na Copa.
-- `resolver_copa(pontuacoes, temporadas_copa, rodada_exibida, rodada_maxima_disputada)`
+- `resolver_copa(pontuacoes, temporadas_copa, rodada_exibida, rodada_maxima_definitiva)`
   é a função única usada tanto pelo app quanto pelo CLI:
-  - uma fase só é definitiva quando `rodada_maxima_disputada >= rodadas_fase.stop - 1`;
-  - se a fase anterior ainda não fechou, devolve `EstadoCopa` com `motivo_bloqueio`.
+  - uma fase só é definitiva quando sua última rodada já tem `definitivo = true`
+    (`rodada_maxima_definitiva >= rodadas_fase.stop - 1`);
+  - se a fase anterior ainda não fechou (ou está parcial), devolve `EstadoCopa` com
+    `motivo_bloqueio`.
 
 ### 4.4 Pontuação parcial (`dados/api_cartola.py`)
 - Definitiva: `GET https://api.cartola.globo.com/time/id/{id}/{rodada}` → campo `pontos`.
@@ -198,17 +201,20 @@ Ao fim de cada campeonato:
 - **Navegação sincronizada com a URL** (`ui.componentes.seletor_navegacao`): usa
   `st.segmented_control` + `st.query_params` (`aba`, `rodada_liga`, `rodada_copa`,
   `sub_hall`). Há um script `popstate` em `app.py` que recarrega no Voltar/Avançar.
-- **Tabelas**: HTML próprio via `ui.componentes.exibir_tabela(...)`, recebendo números
-  crus (para decidir cores diretamente via `_cor_lado`) e formatando com
-  `colunas_formatar` → `formatar_pontuacao` (`1.234,56`).
-- **CSS** (`src/ui/estilo.css`): seletores apenas por hooks estáveis
-  (`[class*="st-key-nav_"]`, `.st-key-*`, `data-testid`, `aria-checked`, `role`);
-  **nunca** classes `st-emotion-cache-*`. Deve funcionar bem no celular (`@media (max-width: 600px)`)
-  e no tema escuro (`prefers-color-scheme: dark`).
+- **Tabelas e componentes** (`src/ui/componentes.py` + `src/ui/estilo.css`): HTML limpo com
+  classes CSS (sem estilos inline repetidos); `exibir_tabela(...)` recebe números crus
+  para decidir as classes (`_classe_lado`) e formata com `formatar_pontuacao` (`1.234,56`).
+  Rodadas parciais exibem `⏳` no seletor e banner discreto (`exibir_aviso_parcial`) nas
+  abas Liga e Copa.
+- **CSS** (`src/ui/estilo.css`): lido uma vez por processo (`lru_cache`); usa apenas hooks
+  estáveis (`[class*="st-key-nav_"]`, `.st-key-*`, `data-testid`, `aria-checked`, `role`) —
+  **nunca** classes `st-emotion-cache-*`. Adaptado a celular (`@media (max-width: 600px)`)
+  e tema escuro (`prefers-color-scheme: dark`).
 - **Estatísticas** (`paginas/estatisticas.py` + `liga/estatisticas.py` + `liga/evolucao.py`):
   "Evolução" (Vega-Lite sem novas dependências), "Desempenho" e "Confrontos". Comportamento
   detalhado do gráfico está no `README.md`.
-- **Regras** (`paginas/regras.py`): placeholder "Em construção".
+- **Regras** (`paginas/regras.py`): gera o texto dinamicamente a partir de `config.regras`
+  e `config.copa`.
 
 ## 8. Convenções para alterações
 
@@ -218,7 +224,7 @@ Ao fim de cada campeonato:
   `liga/`, `copa/`, `dados/` e `campeonato.py`; `src/paginas/` e `src/ui/` apenas exibem.
 - Ao mudar o comportamento do app ou a arquitetura, atualize `README.md` e este `CLAUDE.md`.
 - Para validar mudanças:
-  - rode `uv run pytest`;
+  - rode `uv run ruff check .` e `uv run pytest`;
   - rode `uv run streamlit run src/app.py` e confira desktop e celular (< 600 px);
   - se houver referência em `.verificacao/referencia.json`, rode
     `uv run python ferramentas/verificar_saidas.py comparar`.

@@ -40,7 +40,7 @@ def _pontuacoes_base():
             ("B1", 85), ("B2", 75), ("B3", 65), ("B4", 55),
             ("F1", 40), ("F2", 40),
         ]:
-            linhas.append({"nome_time": nome, "rodada": r, "pontuacao": float(pts)})
+            linhas.append({"nome_time": nome, "rodada": r, "pontuacao": float(pts), "definitivo": True})
     # Quartas (rodadas 5 e 6): empate exato entre F1 e F2 favorece time1 (F1)
     for r in (5, 6):
         for nome, pts in [
@@ -49,7 +49,7 @@ def _pontuacoes_base():
             ("B1", 90), ("A3", 60),
             ("A2", 60), ("B2", 80),
         ]:
-            linhas.append({"nome_time": nome, "rodada": r, "pontuacao": float(pts)})
+            linhas.append({"nome_time": nome, "rodada": r, "pontuacao": float(pts), "definitivo": True})
     return pd.DataFrame(linhas)
 
 
@@ -57,32 +57,49 @@ def test_copa_bloqueia_fase_futura_antes_de_anterior_fechar():
     copa = _config_copa_simples()
     pts = _pontuacoes_base()
     # Apenas rodada 2 registrada -> fase de grupos (2..3) ainda não fechou
-    estado = resolver_copa(pts[pts["rodada"] <= 2], copa, rodada_exibida=5, rodada_maxima_disputada=2)
+    estado = resolver_copa(pts[pts["rodada"] <= 2], copa, rodada_exibida=5)
     assert estado.motivo_bloqueio is not None
     assert "fase de grupos" in estado.motivo_bloqueio.lower()
+
+
+def test_copa_rodada_final_da_fase_parcial_nao_define_vencedor():
+    copa = _config_copa_simples()
+    pts = _pontuacoes_base()
+    # Marca rodada 6 (último jogo das quartas) como parcial (definitivo=False)
+    pts.loc[pts["rodada"] == 6, "definitivo"] = False
+
+    estado_q = resolver_copa(pts, copa, rodada_exibida=6)
+    assert estado_q.definitivo is False
+    assert estado_q.tem_parcial is True
+    assert estado_q.vencedores is None
+    assert "lider_parcial" in estado_q.resultados_mata_mata[0]
+
+    # Semifinal (rodada 7) continua bloqueada enquanto rodada 6 for parcial
+    estado_semi = resolver_copa(pts, copa, rodada_exibida=7)
+    assert estado_semi.motivo_bloqueio is not None
+    assert "quartas" in estado_semi.motivo_bloqueio.lower()
 
 
 def test_copa_chaveamento_quartas_e_desempate_time1():
     copa = _config_copa_simples()
     pts = _pontuacoes_base()
 
-    # Grupos encerrados (rodada 3) -> quartas (rodada 5) já montam chaveamento mesmo sem jogos
-    estado_q_futuro = resolver_copa(
-        pts[pts["rodada"] <= 3], copa, rodada_exibida=5, rodada_maxima_disputada=3
-    )
+    # Grupos encerrados (rodada 3 definitiva) -> quartas (rodada 5) já montam chaveamento
+    estado_q_futuro = resolver_copa(pts[pts["rodada"] <= 3], copa, rodada_exibida=5)
     assert estado_q_futuro.motivo_bloqueio is None
     assert estado_q_futuro.resultados_mata_mata[0]["time1"] == "F1"
     assert estado_q_futuro.resultados_mata_mata[0]["time2"] == "F2"
     assert estado_q_futuro.resultados_mata_mata[1]["time1"] == "A1"
     assert estado_q_futuro.resultados_mata_mata[1]["time2"] == "B3"
 
-    # Fim das quartas (rodada 6): F1 == F2 -> F1 vence (>=)
-    estado_q_final = resolver_copa(pts, copa, rodada_exibida=6, rodada_maxima_disputada=6)
+    # Fim das quartas (rodada 6 definitiva): F1 == F2 -> F1 vence (>=)
+    estado_q_final = resolver_copa(pts, copa, rodada_exibida=6)
     assert estado_q_final.definitivo is True
+    assert estado_q_final.tem_parcial is False
     assert estado_q_final.vencedores == ["F1", "A1", "B1", "B2"]
 
     # Semifinal (rodada 7 futura) já monta F1 x A1 e B1 x B2
-    estado_semi = resolver_copa(pts, copa, rodada_exibida=7, rodada_maxima_disputada=6)
+    estado_semi = resolver_copa(pts, copa, rodada_exibida=7)
     assert estado_semi.motivo_bloqueio is None
     pares = [(r["time1"], r["time2"]) for r in estado_semi.resultados_mata_mata]
     assert pares == [("F1", "A1"), ("B1", "B2")]

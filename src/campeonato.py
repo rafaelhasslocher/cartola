@@ -40,12 +40,29 @@ class TemporadaCarregada:
     def rodada_liga_relativa(self, rodada_liga, turno):
         return rodada_liga_relativa(rodada_liga, turno, self.offsets_rodada_liga)
 
-    def resolver_copa(self, rodada_exibida, rodada_maxima_disputada=None):
+    @property
+    def rodada_maxima_definitiva(self):
+        if self.pontuacoes.empty:
+            return 0
+        defs = self.pontuacoes["definitivo"].astype("boolean").fillna(True).astype(bool)
+        rodadas_def = self.pontuacoes.loc[defs, "rodada"]
+        return int(rodadas_def.max()) if not rodadas_def.empty else 0
+
+    def resolver_copa(self, rodada_exibida, apenas_ate_rodada=False):
+        """Resolve a Copa na `rodada_exibida`.
+
+        - No app (`apenas_ate_rodada=False`), usa a maior rodada definitiva já
+          registrada na temporada (permite ver chaveamento futuro se a fase
+          anterior já fechou).
+        - No CLI (`apenas_ate_rodada=True`), restringe a referência à própria
+          `rodada_exibida` (e seus dados definitivos até ela).
+        """
+        rodada_ref = None if apenas_ate_rodada else self.rodada_maxima_definitiva
         return resolver_copa(
             self.pontuacoes,
             self.config.copa,
             rodada_exibida,
-            rodada_maxima_disputada=rodada_maxima_disputada,
+            rodada_maxima_definitiva=rodada_ref,
         )
 
 

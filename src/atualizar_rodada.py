@@ -15,11 +15,7 @@ from dados.api_cartola import (
     validar_cobertura,
 )
 from dados.persistencia import salvar_pontuacoes_rodada
-from liga.ranking import (
-    exibir_confrontos_rodada,
-    exibir_resultados,
-    montar_ranking_final,
-)
+from liga.ranking import exibir_confrontos_rodada, exibir_resultados
 
 
 def _detectar_rodada_e_modo():
@@ -83,20 +79,17 @@ def atualizar_rodada(rodada_desejada, parcial=False, ano=None):
     )
 
     temporada = carregar_temporada(ano)
-    tabela_ate_rodada = temporada.resultados_liga[
-        temporada.resultados_liga["rodada_brasileirao"] <= rodada_desejada
-    ]
-    exibir_confrontos_rodada(tabela_ate_rodada, rodada_desejada)
+    exibir_confrontos_rodada(temporada.resultados_liga, rodada_desejada)
 
-    df_final = montar_ranking_final(
-        tabela_ate_rodada, rodada_desejada, definitivo=not parcial
-    )
+    df_final = temporada.ranking_liga[
+        temporada.ranking_liga["rodada"] == rodada_desejada
+    ].reset_index(drop=True)
     turno_atual = temporada.turno_da_rodada(rodada_desejada)
     exibir_resultados(df_final, turno=turno_atual)
 
     estado_copa = temporada.resolver_copa(
         rodada_exibida=rodada_desejada,
-        rodada_maxima_disputada=rodada_desejada,
+        apenas_ate_rodada=True,
     )
     exibir_copa_rodada(estado_copa)
 

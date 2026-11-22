@@ -1,5 +1,6 @@
 """Componentes visuais reutilizáveis e constantes de tema do app Streamlit."""
 
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
@@ -10,16 +11,6 @@ COR_COPA = "#B39DDB"
 COR_ESTATISTICAS = "#4FB0AE"
 COR_REGRAS = "#E3A857"
 COR_HALL = "#4A7FC9"
-
-COR_OURO = "rgba(255, 215, 0, 0.28)"
-COR_PRATA = "rgba(192, 192, 192, 0.24)"
-
-COR_VENCEDOR = "rgba(46, 204, 113, 0.20)"
-COR_PERDEDOR = "rgba(231, 76, 60, 0.16)"
-COR_EMPATE = "rgba(241, 196, 15, 0.22)"
-
-COR_TOTAL_TEXTO = "#1F8A56"
-COR_TOTAL_TEXTO_NEGATIVO = "#C0392B"
 
 COR_ESTATISTICAS_LIDER = "#5FA8D3"
 COR_ESTATISTICAS_TOP5 = "#6FBF8B"
@@ -35,6 +26,18 @@ LARGURA_JOGOS = "var(--largura-jogos)"
 _CAMINHO_CSS = Path(__file__).resolve().parent / "estilo.css"
 
 
+@lru_cache(maxsize=1)
+def _ler_css_base():
+    return _CAMINHO_CSS.read_text(encoding="utf-8")
+
+
+def _estilo_accent(cor):
+    return (
+        f"--accent:{cor}; --accent-cc:{cor}CC; --accent-aa:{cor}AA; "
+        f"--accent-40:{cor}40; --accent-22:{cor}22; --accent-14:{cor}14;"
+    )
+
+
 def injetar_estilos(nomes_completos):
     largura_nome_base = f"{max(len(n) for n in nomes_completos) + 2}ch"
     variaveis = (
@@ -47,8 +50,7 @@ def injetar_estilos(nomes_completos):
         f"    --cor-regras: {COR_REGRAS};\n"
         "}\n"
     )
-    css = _CAMINHO_CSS.read_text(encoding="utf-8")
-    st.markdown(f"<style>\n{variaveis}\n{css}\n</style>", unsafe_allow_html=True)
+    st.markdown(f"<style>\n{variaveis}\n{_ler_css_base()}\n</style>", unsafe_allow_html=True)
 
 
 def formatar_pontuacao(valor):
@@ -64,21 +66,18 @@ def _numero_ou_zero(valor):
     return float(valor)
 
 
-def _celula(valor, extra_estilo=""):
-    return (
-        "<td style='text-align:center; padding: 10px 14px; white-space: nowrap; "
-        f"box-sizing: border-box; {extra_estilo}'>{valor}</td>"
-    )
+def _celula(valor, classes=()):
+    attr = f" class='{' '.join(classes)}'" if classes else ""
+    return f"<td{attr}>{valor}</td>"
 
 
-def _cor_lado(col_idx, idx_sep, total1, total2, margem_empate=None):
-    """Retorna a cor de fundo da célula conforme o resultado do confronto."""
+def _classe_lado(col_idx, idx_sep, total1, total2, margem_empate=None):
     if margem_empate is not None and abs(total1 - total2) < margem_empate:
-        return COR_EMPATE
+        return "celula-empate"
     if total1 > total2:
-        return COR_VENCEDOR if col_idx < idx_sep else COR_PERDEDOR
+        return "celula-vencedor" if col_idx < idx_sep else "celula-perdedor"
     if total2 > total1:
-        return COR_PERDEDOR if col_idx < idx_sep else COR_VENCEDOR
+        return "celula-perdedor" if col_idx < idx_sep else "celula-vencedor"
     return ""
 
 
@@ -110,40 +109,21 @@ def exibir_tabela(
             + "</colgroup>"
         )
 
-    cabecalho = "".join(
-        "<th style='text-align:center; padding: 12px 14px; color: white; box-sizing: border-box; "
-        f"border: none; white-space: nowrap; font-weight: 600; letter-spacing: 0.02em; font-size: 0.9rem;'>{coluna}</th>"
-        for coluna in colunas
-    )
+    cabecalho = "".join(f"<th>{coluna}</th>" for coluna in colunas)
 
-    estilo_borda_base = (
-        "border: none; border-bottom: 1px solid rgba(128, 128, 128, 0.15);"
-        if bordas_internas
-        else "border: none;"
-    )
-
-    linhas = ""
+    linhas = []
     for i, linha in enumerate(df.itertuples(index=False)):
-        estilo_linha = "transition: background-color 0.15s;"
-        celulas = ""
-
+        classe_linha = ""
         if tipo_destaque == "liga":
-            if i == 0:
-                estilo_linha += f" background-color: {COR_OURO}; font-weight: 700;"
-            elif i == 1:
-                estilo_linha += f" background-color: {COR_PRATA}; font-weight: 700;"
-            else:
-                estilo_linha += " font-weight:620"
+            classe_linha = "linha-ouro" if i == 0 else ("linha-prata" if i == 1 else "linha-normal")
         elif tipo_destaque == "copa":
-            cor = COR_VENCEDOR if i < qtd_classificados else COR_PERDEDOR
-            estilo_linha += f" background-color: {cor};"
+            classe_linha = "linha-classificado" if i < qtd_classificados else "linha-eliminado"
 
+        celulas = []
         if tipo_destaque in ("mata_mata", "confronto_liga"):
             if tipo_destaque == "mata_mata":
                 n_jogos = (len(linha) - 5) // 2
-                idx_total1 = n_jogos + 1
-                idx_sep = n_jogos + 2
-                idx_total2 = n_jogos + 3
+                idx_total1, idx_sep, idx_total2 = n_jogos + 1, n_jogos + 2, n_jogos + 3
                 margem = None
             else:
                 idx_total1 = colunas_originais.index("pontuacao_time1")
@@ -159,94 +139,75 @@ def exibir_tabela(
                 texto = formatar_pontuacao(valor) if nome_col in colunas_formatar else valor
 
                 if col_idx == idx_sep:
-                    estilo_celula = (
-                        f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
-                    )
+                    classes = ["celula-sep"]
                 else:
-                    cor_fundo = _cor_lado(col_idx, idx_sep, total1, total2, margem_empate=margem)
-                    if tipo_destaque == "mata_mata":
-                        estilo_celula = " font-weight: 700;"
-                        if cor_fundo:
-                            estilo_celula += f"background-color: {cor_fundo};"
-                        if col_idx in (idx_total1, idx_total2):
-                            estilo_celula += (
-                                f" color: {COR_TOTAL_TEXTO}; font-size: 1.02rem;"
-                            )
-                    else:
-                        estilo_celula = (
-                            f"background-color: {cor_fundo}; font-weight: 700;"
-                            if cor_fundo
-                            else ""
-                        )
-
-                celulas += _celula(texto, estilo_borda_base + estilo_celula)
+                    classes = ["celula-negrito"]
+                    lado = _classe_lado(col_idx, idx_sep, total1, total2, margem_empate=margem)
+                    if lado:
+                        classes.append(lado)
+                    if tipo_destaque == "mata_mata" and col_idx in (idx_total1, idx_total2):
+                        classes.append("celula-total-destaque")
+                celulas.append(_celula(texto, classes))
         else:
             for col_idx, valor in enumerate(linha):
-                estilo_celula = ""
                 nome_original = (
-                    colunas_originais[col_idx]
-                    if col_idx < len(colunas_originais)
-                    else None
+                    colunas_originais[col_idx] if col_idx < len(colunas_originais) else None
                 )
                 texto = formatar_pontuacao(valor) if nome_original in colunas_formatar else valor
-
-                if nome_original in ("Nome do time", "time1", "time2"):
-                    estilo_celula += " font-weight: 700;"
-                if tipo_destaque == "copa":
-                    estilo_celula += " font-weight: 700;"
-
+                classes = []
+                if nome_original in ("Nome do time", "time1", "time2") or tipo_destaque == "copa":
+                    classes.append("celula-negrito")
                 if nome_original in colunas_total:
-                    cor_total = (
-                        COR_TOTAL_TEXTO_NEGATIVO
+                    classes.append(
+                        "celula-total-negativo"
                         if tipo_destaque == "copa" and i >= qtd_classificados
-                        else COR_TOTAL_TEXTO
-                    )
-                    estilo_celula += (
-                        f"font-weight: 700; color: {cor_total}; font-size: 0.85rem;"
+                        else "celula-total"
                     )
                 if nome_original == "posicao":
-                    estilo_celula += " font-weight: 700; opacity: 0.75;"
+                    classes.append("celula-posicao")
                 if nome_original == "x":
-                    estilo_celula += (
-                        f"font-weight: 700; color: {cor_accent}; font-size: 1.1rem;"
-                    )
-                celulas += _celula(texto, estilo_borda_base + estilo_celula)
+                    classes.append("celula-sep")
+                celulas.append(_celula(texto, classes))
 
-        linhas += f"<tr style='{estilo_linha}'>{celulas}</tr>"
+        tr_attr = f" class='{classe_linha}'" if classe_linha else ""
+        linhas.append(f"<tr{tr_attr}>{''.join(celulas)}</tr>")
+
+    classes_tabela = ["tabela-dados"]
+    if larguras_colunas:
+        classes_tabela.append("largura-fixa")
+    if not bordas_internas:
+        classes_tabela.append("sem-bordas")
 
     st.markdown(
-        "<div class='tabela' style='overflow-x: auto; -webkit-overflow-scrolling: touch; "
-        "margin-bottom: 10px; text-align: center; line-height: 1;'>"
-        "<div style='display: inline-block; text-align: left; border-radius: 12px; "
-        "box-shadow: 0 1px 6px rgba(0,0,0,0.10); border: 1px solid rgba(128,128,128,0.15); "
-        "overflow: hidden; line-height: normal;'>"
-        f"<table style='border-collapse: collapse; margin: 0;{' table-layout: fixed;' if larguras_colunas else ''}'>"
+        f"<div class='tabela-wrapper'>"
+        f"<div class='tabela-card' style='{_estilo_accent(cor_accent)}'>"
+        f"<table class='{' '.join(classes_tabela)}'>"
         f"{colgroup}"
-        f"<thead><tr style='background: linear-gradient(90deg, {cor_accent}, {cor_accent}CC);'>"
-        f"{cabecalho}</tr></thead>"
-        f"<tbody>{linhas}</tbody></table></div></div>",
+        f"<thead><tr>{cabecalho}</tr></thead>"
+        f"<tbody>{''.join(linhas)}</tbody></table></div></div>",
         unsafe_allow_html=True,
     )
 
 
 def exibir_subtitulo(texto, cor_accent=COR_LIGA):
     st.markdown(
-        "<div style='display:flex; align-items:center; justify-content:center; gap:10px; margin: 18px 0 8px 0;'>"
-        f"<div style='width:5px; height:20px; border-radius:3px; background:{cor_accent};'></div>"
-        "<h3 style='margin:0; font-size:1.1rem; font-weight:700; color: rgba(70,70,70,0.95);'>"
-        f"{texto}</h3></div>",
+        f"<div class='subtitulo-bloco' style='{_estilo_accent(cor_accent)}'>"
+        "<div class='subtitulo-barra'></div>"
+        f"<h3 class='subtitulo-texto'>{texto}</h3></div>",
         unsafe_allow_html=True,
     )
 
 
 def exibir_cabecalho_secao(texto, cor_accent):
     st.markdown(
-        "<div style='padding: 10px 18px; border-radius: 12px; margin-bottom: 12px; "
-        f"background: linear-gradient(90deg, {cor_accent}22, transparent); "
-        f"border-left: 5px solid {cor_accent};'>"
-        f"<span style='font-size:1.25rem; font-weight:800;'>{texto}</span></div>",
+        f"<div class='secao-cabecalho' style='{_estilo_accent(cor_accent)}'>"
+        f"<span class='secao-titulo'>{texto}</span></div>",
         unsafe_allow_html=True,
     )
+
+
+def exibir_aviso_parcial(texto):
+    st.markdown(f"<div class='aviso-parcial'>{texto}</div>", unsafe_allow_html=True)
 
 
 def obter_param_int(nome, valor_padrao):
@@ -314,71 +275,58 @@ def exibir_ranking_titulos(
     ranking_ordenado = sorted(contagem.items(), key=lambda item: (-item[1], item[0]))
     maior_qtd = ranking_ordenado[0][1] if ranking_ordenado else 1
 
-    if nomes_longos:
-        estilo_nome = (
-            "width:var(--largura-nome-ranking-longo); font-weight:700; "
-            "font-size:0.92rem; white-space:normal; overflow:visible; "
-            "word-break:break-word; line-height:1.2;"
-        )
-        largura_qtd = "26px"
-    else:
-        estilo_nome = (
-            "width:100px; font-weight:700; font-size:0.92rem; "
-            "white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-        )
-        largura_qtd = "22px"
+    classe_nome = "ranking-nome-longo" if nomes_longos else "ranking-nome"
+    classe_qtd = "ranking-qtd ranking-qtd-longo" if nomes_longos else "ranking-qtd"
 
-    linhas_html = ""
+    linhas_html = []
     for posicao, (nome, qtd) in enumerate(ranking_ordenado):
         largura_barra = round((qtd / maior_qtd) * 100)
         medalha = ["🥇", "🥈", "🥉"][posicao] if posicao < 3 else "▫️"
-        linhas_html += (
-            "<div style='display:flex; align-items:center; gap:10px; margin-bottom:9px;'>"
-            f"<div style='width:22px; text-align:center; font-size:1rem;'>{medalha}</div>"
-            f"<div style='{estilo_nome}'>{nome}</div>"
-            "<div style='flex:1; background:rgba(128,128,128,0.12); border-radius:6px; height:16px; overflow:hidden;'>"
-            f"<div style='width:{largura_barra}%; height:100%; "
-            f"background:linear-gradient(90deg, {cor_accent}, {cor_accent}AA); border-radius:6px;'></div>"
+        linhas_html.append(
+            "<div class='ranking-linha'>"
+            f"<div class='ranking-medalha'>{medalha}</div>"
+            f"<div class='{classe_nome}'>{nome}</div>"
+            "<div class='ranking-trilha'>"
+            f"<div class='ranking-barra' style='width:{largura_barra}%;'></div>"
             "</div>"
-            f"<div style='width:{largura_qtd}; text-align:right; font-weight:800; color:{cor_accent}; font-size:0.95rem;'>{qtd}</div>"
+            f"<div class='{classe_qtd}'>{qtd}</div>"
             "</div>"
         )
 
     st.markdown(
-        "<div style='padding:16px 20px; border-radius:14px; margin-bottom:22px; "
-        f"background:{cor_accent}14; border:1px solid {cor_accent}40;'>"
-        "<div style='font-weight:800; font-size:1rem; margin-bottom:14px; color:rgba(60,60,60,0.9);'>"
-        f"{titulo}</div>"
-        f"{linhas_html}</div>",
+        f"<div class='ranking-card' style='{_estilo_accent(cor_accent)}'>"
+        f"<div class='ranking-titulo'>{titulo}</div>"
+        f"{''.join(linhas_html)}</div>",
         unsafe_allow_html=True,
     )
 
 
 def exibir_linha_do_tempo_titulos(titulos, cor_accent):
     """Lista cronológica (mais recente primeiro) de campeões `(temporada, jogador, time, nota)`."""
-    itens_html = ""
+    itens_html = []
     tem_observacao = False
     for temporada, campeao, nome_time, nota in reversed(titulos):
         marcador = ""
         if nota:
             tem_observacao = True
-            marcador = f" <span style='opacity:0.75; font-weight:700;'>{nota}</span>"
+            marcador = f" <span class='timeline-nota'>{nota}</span>"
         rotulo_campeao = (
-            f"{nome_time} — <span style='font-weight:800;'>{campeao}</span>"
+            f"{nome_time} — <span class='timeline-campeao'>{campeao}</span>"
             if nome_time
-            else f"<span style='font-weight:800;'>{campeao}</span>"
+            else f"<span class='timeline-campeao'>{campeao}</span>"
         )
-        itens_html += (
-            "<div style='display:flex; align-items:center; gap:16px; padding:11px 18px; "
-            "border-radius:10px; margin-bottom:6px; background:rgba(128,128,128,0.05); "
-            "transition: background-color 0.15s;'>"
-            f"<div style='min-width:64px; font-weight:800; color:{cor_accent}; font-size:0.95rem;'>{temporada}</div>"
-            "<div style='font-size:1.15rem;'>🏆</div>"
-            f"<div style='font-weight:600; font-size:1rem;'>{rotulo_campeao}{marcador}</div>"
+        itens_html.append(
+            "<div class='timeline-item'>"
+            f"<div class='timeline-temporada'>{temporada}</div>"
+            "<div class='timeline-trofeu'>🏆</div>"
+            f"<div class='timeline-texto'>{rotulo_campeao}{marcador}</div>"
             "</div>"
         )
 
-    st.markdown(f"<div>{itens_html}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='{_estilo_accent(cor_accent)}'>{''.join(itens_html)}</div>",
+        unsafe_allow_html=True,
+    )
 
     if tem_observacao:
         st.caption("*Campeonato não premiado financeiramente.")

@@ -10,6 +10,7 @@ from ui.componentes import (
     LARGURA_POSICAO,
     LARGURA_TOTAL,
     LARGURA_X,
+    exibir_aviso_parcial,
     exibir_cabecalho_secao,
     exibir_seletor_rodada,
     exibir_subtitulo,
@@ -107,6 +108,10 @@ def render(temporada):
 
     if rodada_ja_ocorreu:
         exibir_cabecalho_secao(f"Liga — Rodada {rodada_atual}", COR_LIGA)
+        if not definitivos_liga.get(rodada_atual, True):
+            exibir_aviso_parcial(
+                "⏳ Rodada em andamento — pontuações e classificação são parciais e podem mudar."
+            )
 
         confrontos_rodada = resultados[
             resultados["rodada_brasileirao"] == rodada_atual

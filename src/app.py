@@ -4,7 +4,7 @@ import streamlit as st
 
 from caminhos import ano_padrao
 from campeonato import assinatura_temporada, carregar_temporada
-from config_temporada import carregar_config_temporada, carregar_historico_campeoes
+from config_temporada import carregar_historico_campeoes, ler_cabecalho_temporada
 from paginas import copa, estatisticas, hall, liga, regras
 from ui.componentes import injetar_estilos, seletor_navegacao
 
@@ -20,8 +20,8 @@ def _obter_historico_cache(_assinatura):
 
 
 ano = ano_padrao()
-config_inicial = carregar_config_temporada(ano)
-titulo_pagina = f"{config_inicial.titulo} - {config_inicial.ano}"
+ano_cfg, titulo_cfg = ler_cabecalho_temporada(ano)
+titulo_pagina = f"{titulo_cfg} - {ano_cfg}"
 
 st.set_page_config(page_title=titulo_pagina, layout="centered")
 
@@ -66,4 +66,4 @@ elif aba_atual == "hall":
 elif aba_atual == "estatisticas":
     estatisticas.render(temporada)
 elif aba_atual == "regras":
-    regras.render()
+    regras.render(temporada)

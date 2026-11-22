@@ -10,6 +10,7 @@ from ui.componentes import (
     LARGURA_POSICAO,
     LARGURA_TOTAL,
     LARGURA_X,
+    exibir_aviso_parcial,
     exibir_cabecalho_secao,
     exibir_seletor_rodada,
     exibir_subtitulo,
@@ -54,10 +55,7 @@ def render(temporada):
         definitivos=definitivos_copa,
     )
 
-    estado = temporada.resolver_copa(
-        rodada_exibida=rodada_atual,
-        rodada_maxima_disputada=rodada_maxima_disputada,
-    )
+    estado = temporada.resolver_copa(rodada_exibida=rodada_atual)
 
     if estado.temporada is None:
         exibir_cabecalho_secao(f"Copa — Rodada {rodada_atual}", COR_COPA)
@@ -70,6 +68,10 @@ def render(temporada):
     exibir_cabecalho_secao(
         f"Copa — {NOMES_FASES.get(estado.fase, estado.fase)}", COR_COPA
     )
+    if estado.tem_parcial:
+        exibir_aviso_parcial(
+            "⏳ Rodada em andamento — os placares incluem pontuações parciais e podem mudar."
+        )
 
     if estado.fase == "fase_de_grupos":
         n_jogos = len(estado.rodadas_fase)

@@ -79,6 +79,14 @@ def _validar_nomes_times(nomes_conhecidos, confrontos_liga, copa):
         )
 
 
+def ler_cabecalho_temporada(ano=None):
+    """Lê apenas `[geral]` de `temporada.toml` (leve, usado antes do cache em `app.py`)."""
+    ano = ano_padrao() if ano is None else int(ano)
+    with caminho_config_temporada(ano).open("rb") as f:
+        geral = tomllib.load(f)["geral"]
+    return int(geral["ano"]), geral["titulo"]
+
+
 def carregar_config_temporada(ano=None):
     ano = ano_padrao() if ano is None else int(ano)
     with caminho_config_temporada(ano).open("rb") as f:

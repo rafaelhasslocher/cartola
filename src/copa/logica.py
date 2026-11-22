@@ -28,6 +28,7 @@ class EstadoCopa:
     fase: str | None
     rodadas_fase: range | None = None
     definitivo: bool = False
+    tem_parcial: bool = False
     motivo_bloqueio: str | None = None
     grupos: dict[str, dict] | None = None
     times_fora: list[str] | None = None
@@ -46,6 +47,25 @@ def _construir_indice_pontuacoes(pontuacoes):
     }
 
 
+def _rodadas_parciais(pontuacoes):
+    """Conjunto de rodadas registradas que ainda estão com `definitivo == False`."""
+    if pontuacoes.empty or "definitivo" not in pontuacoes.columns:
+        return set()
+    parciais = ~pontuacoes["definitivo"].astype("boolean").fillna(True).astype(bool)
+    return {int(r) for r in pontuacoes.loc[parciais, "rodada"].unique()}
+
+
+def _ultima_rodada_definitiva(pontuacoes):
+    """Última rodada registrada com `definitivo == True` (ou 0 se não houver)."""
+    if pontuacoes.empty:
+        return 0
+    if "definitivo" not in pontuacoes.columns:
+        return int(pontuacoes["rodada"].max())
+    defs = pontuacoes["definitivo"].astype("boolean").fillna(True).astype(bool)
+    rodadas_def = pontuacoes.loc[defs, "rodada"]
+    return int(rodadas_def.max()) if not rodadas_def.empty else 0
+
+
 def determinar_temporada_e_fase_atual_copa(rodada_atual, temporadas_copa):
     for numero, config in temporadas_copa.items():
         for fase, rodadas in config.fases.items():
@@ -59,11 +79,14 @@ def rodadas_disputadas(rodadas_fase, rodada_atual):
     return range(rodadas_fase.start, fim + 1)
 
 
-def fase_esta_definida(rodada_referencia, rodadas_fase):
-    return rodada_referencia >= rodadas_fase.stop - 1
+def fase_esta_definida(rodada_definitiva, rodadas_fase):
+    """Uma fase só está definida quando sua última rodada já é definitiva."""
+    return rodada_definitiva >= rodadas_fase.stop - 1
 
 
-def _montar_grupo(indice_pts, times_grupo, rodadas_fase, rodadas_validas, definitivo, n_classificados=3):
+def _montar_grupo(
+    indice_pts, times_grupo, rodadas_fase, rodadas_validas, definitivo, n_classificados=3
+):
     rodadas_todas = list(rodadas_fase)
     rodadas_ativas = set(rodadas_validas)
     linhas = []
@@ -165,13 +188,14 @@ def resolver_copa(
     pontuacoes,
     temporadas_copa,
     rodada_exibida,
-    rodada_maxima_disputada=None,
+    rodada_maxima_definitiva=None,
 ):
     """Resolve a Copa até a fase correspondente a `rodada_exibida`.
 
     - `rodada_exibida`: rodada sendo consultada (pode ser futura no app).
-    - `rodada_maxima_disputada`: última rodada com pontuação registrada (usada
-      para saber se a fase anterior já fechou). Se omitida, usa `rodada_exibida`.
+    - `rodada_maxima_definitiva`: última rodada com pontuação **definitiva**
+      (usada para saber se a fase já fechou de verdade). Se omitida, usa a
+      maior rodada definitiva presente em `pontuacoes` até `rodada_exibida`.
     """
     temporada_num, fase_atual = determinar_temporada_e_fase_atual_copa(
         rodada_exibida, temporadas_copa
@@ -179,22 +203,26 @@ def resolver_copa(
     if temporada_num is None:
         return EstadoCopa(temporada=None, fase=None)
 
-    rodada_ref = (
-        rodada_exibida if rodada_maxima_disputada is None else rodada_maxima_disputada
-    )
     config = temporadas_copa[temporada_num]
     pontuacoes_ate = pontuacoes[pontuacoes["rodada"] <= rodada_exibida]
+    rodada_ref = (
+        _ultima_rodada_definitiva(pontuacoes_ate)
+        if rodada_maxima_definitiva is None
+        else rodada_maxima_definitiva
+    )
+    parciais = _rodadas_parciais(pontuacoes_ate)
     indice_pts = _construir_indice_pontuacoes(pontuacoes_ate)
 
     # 1) Fase de grupos (base para todo o mata-mata)
     rodadas_grupos = config.fases["fase_de_grupos"]
+    rodadas_grupos_ativas = rodadas_disputadas(rodadas_grupos, rodada_exibida)
     definitivo_grupos = fase_esta_definida(rodada_ref, rodadas_grupos)
     grupos = {
         nome_grupo: _montar_grupo(
             indice_pts,
             times_grupo,
             rodadas_grupos,
-            rodadas_disputadas(rodadas_grupos, rodada_exibida),
+            rodadas_grupos_ativas,
             definitivo_grupos,
         )
         for nome_grupo, times_grupo in config.grupos.items()
@@ -205,6 +233,7 @@ def resolver_copa(
             fase="fase_de_grupos",
             rodadas_fase=rodadas_grupos,
             definitivo=definitivo_grupos,
+            tem_parcial=any(r in parciais for r in rodadas_grupos_ativas),
             grupos=grupos,
             times_fora=config.times_fora,
         )
@@ -230,12 +259,13 @@ def resolver_copa(
 
     for i, fase in enumerate(ordem_mata_mata):
         rodadas_fase = config.fases[fase]
+        rodadas_fase_ativas = rodadas_disputadas(rodadas_fase, rodada_exibida)
         definitivo_fase = fase_esta_definida(rodada_ref, rodadas_fase)
         resultados, tabela, vencedores = _montar_fase_mata_mata(
             indice_pts,
             confrontos,
             rodadas_fase,
-            rodadas_disputadas(rodadas_fase, rodada_exibida),
+            rodadas_fase_ativas,
             definitivo_fase,
         )
         if fase == fase_atual:
@@ -244,6 +274,7 @@ def resolver_copa(
                 fase=fase,
                 rodadas_fase=rodadas_fase,
                 definitivo=definitivo_fase,
+                tem_parcial=any(r in parciais for r in rodadas_fase_ativas),
                 resultados_mata_mata=resultados,
                 tabela_mata_mata=tabela,
                 vencedores=vencedores,

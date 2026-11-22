@@ -24,20 +24,295 @@ h1 {
     color: rgba(20, 19, 20, 0.75) !important;
 }
 
-.tabela table td {
-    white-space: nowrap;
+/* ---------- Cabeçalhos, subtítulos e avisos ---------- */
+.secao-cabecalho {
+    padding: 10px 18px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, var(--accent-22), transparent);
+    border-left: 5px solid var(--accent);
 }
 
-.tabela table td,
-.tabela table th {
-    font-size: 0.85rem !important;
-    padding: 6px 8px !important;
+.secao-titulo {
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.subtitulo-bloco {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 18px 0 8px 0;
+}
+
+.subtitulo-barra {
+    width: 5px;
+    height: 20px;
+    border-radius: 3px;
+    background: var(--accent);
+}
+
+.subtitulo-texto {
+    margin: 0 !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: rgba(70, 70, 70, 0.95);
+}
+
+.aviso-parcial {
+    margin: 0 0 12px 0;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: center;
+    background: rgba(241, 196, 15, 0.18);
+    border: 1px solid rgba(241, 196, 15, 0.45);
+}
+
+/* ---------- Tabelas ---------- */
+.tabela-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 10px;
+    text-align: center;
+    line-height: 1;
+}
+
+.tabela-card {
+    display: inline-block;
+    text-align: left;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.10);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    overflow: hidden;
+    line-height: normal;
+}
+
+.tabela-dados {
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.tabela-dados.largura-fixa {
+    table-layout: fixed;
+}
+
+.tabela-dados thead tr {
+    background: linear-gradient(90deg, var(--accent), var(--accent-cc));
+}
+
+.tabela-dados th {
+    text-align: center;
+    padding: 6px 8px;
+    color: #fff;
+    box-sizing: border-box;
+    border: none;
+    white-space: nowrap;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    font-size: 0.85rem;
+}
+
+.tabela-dados tbody tr {
+    transition: background-color 0.15s;
+}
+
+.tabela-dados td {
+    text-align: center;
+    padding: 6px 8px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    border: none;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    font-size: 0.85rem;
+}
+
+.tabela-dados.sem-bordas td {
+    border-bottom: none;
+}
+
+.linha-ouro {
+    background-color: rgba(255, 215, 0, 0.28);
+    font-weight: 700;
+}
+
+.linha-prata {
+    background-color: rgba(192, 192, 192, 0.24);
+    font-weight: 700;
+}
+
+.linha-normal {
+    font-weight: 620;
+}
+
+.linha-classificado {
+    background-color: rgba(46, 204, 113, 0.20);
+}
+
+.linha-eliminado {
+    background-color: rgba(231, 76, 60, 0.16);
+}
+
+.celula-negrito {
+    font-weight: 700;
+}
+
+.celula-vencedor {
+    background-color: rgba(46, 204, 113, 0.20);
+}
+
+.celula-perdedor {
+    background-color: rgba(231, 76, 60, 0.16);
+}
+
+.celula-empate {
+    background-color: rgba(241, 196, 15, 0.22);
+}
+
+.celula-posicao {
+    font-weight: 700;
+    opacity: 0.75;
+}
+
+.celula-sep {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 1.1rem;
+}
+
+.celula-total {
+    font-weight: 700;
+    color: #1F8A56;
+}
+
+.celula-total-negativo {
+    font-weight: 700;
+    color: #C0392B;
+}
+
+.celula-total-destaque {
+    font-weight: 700;
+    color: #1F8A56;
+    font-size: 1.02rem;
+}
+
+/* ---------- Ranking de títulos / indicadores ---------- */
+.ranking-card {
+    padding: 16px 20px;
+    border-radius: 14px;
+    margin-bottom: 22px;
+    background: var(--accent-14);
+    border: 1px solid var(--accent-40);
+}
+
+.ranking-titulo {
+    font-weight: 800;
+    font-size: 1rem;
+    margin-bottom: 14px;
+    color: rgba(60, 60, 60, 0.9);
+}
+
+.ranking-linha {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+}
+
+.ranking-medalha {
+    width: 22px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.ranking-nome {
+    width: 100px;
+    font-weight: 700;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ranking-nome-longo {
+    width: var(--largura-nome-ranking-longo);
+    font-weight: 700;
+    font-size: 0.92rem;
+    white-space: normal;
+    overflow: visible;
+    word-break: break-word;
+    line-height: 1.2;
+}
+
+.ranking-trilha {
+    flex: 1;
+    background: rgba(128, 128, 128, 0.12);
+    border-radius: 6px;
+    height: 16px;
+    overflow: hidden;
+}
+
+.ranking-barra {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-aa));
+    border-radius: 6px;
+}
+
+.ranking-qtd {
+    width: 22px;
+    text-align: right;
+    font-weight: 800;
+    color: var(--accent);
+    font-size: 0.95rem;
+}
+
+.ranking-qtd-longo {
+    width: 26px;
+}
+
+/* ---------- Linha do tempo (Hall de Campeões) ---------- */
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 11px 18px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    background: rgba(128, 128, 128, 0.05);
+    transition: background-color 0.15s;
+}
+
+.timeline-temporada {
+    min-width: 64px;
+    font-weight: 800;
+    color: var(--accent);
+    font-size: 0.95rem;
+}
+
+.timeline-trofeu {
+    font-size: 1.15rem;
+}
+
+.timeline-texto {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.timeline-campeao {
+    font-weight: 800;
+}
+
+.timeline-nota {
+    opacity: 0.75;
+    font-weight: 700;
 }
 
 /* ---------- Navegação (st.segmented_control nativo) ----------
    Usa apenas hooks estáveis (.st-key-*, data-testid, data-variant, aria-checked,
    role) — nunca classes st-emotion-cache-*. A cor da aba ativa vem de :nth-child,
-   já que a ordem de ABAS é fixa. */
+   já que a ordem de abas em app.py é fixa. */
 [class*="st-key-nav_"],
 [class*="st-key-nav_"] div[data-testid="stButtonGroup"] {
     width: 100% !important;
@@ -259,6 +534,24 @@ h1 {
 
 /* ---------- Tema escuro ---------- */
 @media (prefers-color-scheme: dark) {
+    h1 {
+        color: rgba(240, 240, 245, 0.92) !important;
+    }
+
+    .subtitulo-texto,
+    .ranking-titulo {
+        color: rgba(235, 235, 240, 0.92);
+    }
+
+    .celula-total,
+    .celula-total-destaque {
+        color: #3DDC84;
+    }
+
+    .celula-total-negativo {
+        color: #F1948A;
+    }
+
     .st-key-nav_aba button[data-variant="segmented_control"]:not([aria-checked="true"]),
     [class*="st-key-nav_rodada_"] button[data-variant="segmented_control"]:not([aria-checked="true"]) {
         color: #4da3ff !important;
@@ -277,10 +570,10 @@ h1 {
         --largura-nome-ranking-longo: clamp(108px, 42vw, 170px);
     }
 
-    .tabela table td,
-    .tabela table th {
-        font-size: 0.72rem !important;
-        padding: 5px 5px !important;
+    .tabela-dados td,
+    .tabela-dados th {
+        font-size: 0.72rem;
+        padding: 5px 5px;
     }
 
     .block-container {
