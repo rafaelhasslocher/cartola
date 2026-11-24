@@ -98,7 +98,8 @@ def test_estatisticas_indicadores():
     res = montar_tabela_resultados(confrontos, pontuacoes, REGRAS)
     por_rodada, por_confronto = montar_tabela_estatisticas(res)
 
-    ident = lambda t: t
+    def ident(t):
+        return t
     assert [t for _, t, _ in calcular_top_n_por_rodada(por_rodada, 1, ident)] == ["A"]
     assert [t for _, t, _ in calcular_top_n_por_rodada(por_rodada, 3, ident)] == ["A", "B", "C"]
     # A e B estão no top 3 e empataram (saldo < 2.0)

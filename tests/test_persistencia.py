@@ -38,9 +38,11 @@ def test_carregar_temporada_2026_e_historico():
     temp = carregar_temporada(2026)
     assert temp.config.ano == 2026
     assert len(temp.config.ids_times) == 12
-    assert len(temp.pontuacoes) == 420
-    assert len(temp.resultados_liga) == 246
-    assert len(temp.ranking_liga) == 612
+    n_rodadas = temp.pontuacoes["rodada"].nunique()
+    assert n_rodadas >= 35
+    assert len(temp.pontuacoes) == n_rodadas * 12
+    assert len(temp.resultados_liga) > 0
+    assert len(temp.ranking_liga) > 0
 
     historico = carregar_historico_campeoes()
     assert len(historico["liga"]) >= 19

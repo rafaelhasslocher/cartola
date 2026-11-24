@@ -3,7 +3,6 @@
     --largura-x: 50px;
     --largura-posicao: 60px;
     --largura-total: 150px;
-    --largura-jogos: 70px;
     --largura-nome-ranking-longo: 210px;
 }
 
@@ -192,10 +191,124 @@ h1 {
     color: #C0392B;
 }
 
-.celula-total-destaque {
+/* ---------- Copa (grupos e mata-mata responsivos, sem scroll horizontal) ---------- */
+.copa-card {
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.10);
+    border: 1px solid rgba(128, 128, 128, 0.15);
+    overflow: hidden;
+    margin: 0 auto 14px auto;
+}
+
+.copa-card-mata-mata {
+    max-width: 760px;
+}
+
+.copa-cabecalho {
+    background: linear-gradient(90deg, var(--accent), var(--accent-cc));
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+}
+
+.copa-cabecalho-mobile {
+    display: none;
+    padding: 8px 14px;
+}
+
+.copa-grade {
+    display: grid;
+    align-items: center;
+    padding: 8px 14px;
+    gap: 8px;
+}
+
+.copa-grade-mata-mata {
+    grid-template-columns: minmax(0, 1fr) repeat(var(--n-jogos, 3), 72px) 84px;
+}
+
+.copa-grade-grupo {
+    grid-template-columns: 36px minmax(0, 1fr) repeat(var(--n-jogos, 5), 62px) 78px;
+}
+
+.copa-linha {
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    font-size: 0.88rem;
+    transition: background-color 0.15s;
+}
+
+.copa-linha:last-child {
+    border-bottom: none;
+}
+
+.copa-pos {
+    text-align: center;
     font-weight: 700;
-    color: #1F8A56;
-    font-size: 1.02rem;
+    opacity: 0.75;
+}
+
+.copa-time {
+    text-align: left;
+    font-weight: 700;
+    min-width: 0;
+    overflow-wrap: break-word;
+    line-height: 1.25;
+}
+
+.copa-jogador {
+    font-weight: 500;
+    opacity: 0.82;
+}
+
+.copa-jogos {
+    display: contents;
+}
+
+.copa-jogo {
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.copa-jogo-vazio {
+    opacity: 0.4;
+    font-weight: 500;
+}
+
+.copa-jogo-rotulo {
+    display: none;
+    font-size: 0.66rem;
+    font-weight: 600;
+    opacity: 0.68;
+    margin-bottom: 2px;
+}
+
+.copa-total {
+    text-align: right;
+    font-weight: 800;
+    font-size: 0.96rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.copa-cabecalho .copa-total {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.copa-cabecalho .copa-time {
+    font-weight: 600;
+}
+
+.copa-cabecalho .copa-pos {
+    opacity: 1;
+    font-weight: 600;
+}
+
+.copa-cabecalho .copa-jogo {
+    font-weight: 600;
 }
 
 /* ---------- Ranking de títulos / indicadores ---------- */
@@ -543,8 +656,7 @@ h1 {
         color: rgba(235, 235, 240, 0.92);
     }
 
-    .celula-total,
-    .celula-total-destaque {
+    .celula-total {
         color: #3DDC84;
     }
 
@@ -566,7 +678,6 @@ h1 {
         --largura-x: 32px;
         --largura-posicao: 38px;
         --largura-total: 96px;
-        --largura-jogos: 48px;
         --largura-nome-ranking-longo: clamp(108px, 42vw, 170px);
     }
 
@@ -574,6 +685,69 @@ h1 {
     .tabela-dados th {
         font-size: 0.72rem;
         padding: 5px 5px;
+    }
+
+    .copa-cabecalho-desktop {
+        display: none;
+    }
+
+    .copa-cabecalho-mobile {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+    }
+
+    .copa-linha.copa-grade-mata-mata {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "time total"
+            "jogos jogos";
+        padding: 10px 12px;
+        row-gap: 8px;
+        column-gap: 10px;
+    }
+
+    .copa-linha.copa-grade-grupo {
+        grid-template-columns: 26px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "pos time total"
+            "jogos jogos jogos";
+        padding: 10px 12px;
+        row-gap: 8px;
+        column-gap: 8px;
+    }
+
+    .copa-linha .copa-pos {
+        grid-area: pos;
+        font-size: 0.82rem;
+    }
+
+    .copa-linha .copa-time {
+        grid-area: time;
+        font-size: 0.86rem;
+    }
+
+    .copa-linha .copa-total {
+        grid-area: total;
+        font-size: 0.98rem;
+    }
+
+    .copa-linha .copa-jogos {
+        grid-area: jogos;
+        display: grid;
+        grid-template-columns: repeat(var(--n-jogos, 3), minmax(0, 1fr));
+        gap: 4px;
+        padding-top: 6px;
+        border-top: 1px dashed rgba(128, 128, 128, 0.22);
+    }
+
+    .copa-jogo-rotulo {
+        display: block;
+    }
+
+    .copa-jogo {
+        font-size: 0.76rem;
     }
 
     .block-container {

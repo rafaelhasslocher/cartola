@@ -21,7 +21,6 @@ LARGURA_PONTOS = "var(--largura-pontos)"
 LARGURA_X = "var(--largura-x)"
 LARGURA_POSICAO = "var(--largura-posicao)"
 LARGURA_TOTAL = "var(--largura-total)"
-LARGURA_JOGOS = "var(--largura-jogos)"
 
 _CAMINHO_CSS = Path(__file__).resolve().parent / "estilo.css"
 
@@ -85,7 +84,6 @@ def exibir_tabela(
     df,
     rotulos=None,
     tipo_destaque=None,
-    qtd_classificados=3,
     cor_accent=COR_LIGA,
     colunas_total=None,
     colunas_formatar=None,
@@ -116,21 +114,12 @@ def exibir_tabela(
         classe_linha = ""
         if tipo_destaque == "liga":
             classe_linha = "linha-ouro" if i == 0 else ("linha-prata" if i == 1 else "linha-normal")
-        elif tipo_destaque == "copa":
-            classe_linha = "linha-classificado" if i < qtd_classificados else "linha-eliminado"
 
         celulas = []
-        if tipo_destaque in ("mata_mata", "confronto_liga"):
-            if tipo_destaque == "mata_mata":
-                n_jogos = (len(linha) - 5) // 2
-                idx_total1, idx_sep, idx_total2 = n_jogos + 1, n_jogos + 2, n_jogos + 3
-                margem = None
-            else:
-                idx_total1 = colunas_originais.index("pontuacao_time1")
-                idx_sep = colunas_originais.index("x")
-                idx_total2 = colunas_originais.index("pontuacao_time2")
-                margem = margem_empate
-
+        if tipo_destaque == "confronto_liga":
+            idx_total1 = colunas_originais.index("pontuacao_time1")
+            idx_sep = colunas_originais.index("x")
+            idx_total2 = colunas_originais.index("pontuacao_time2")
             total1 = _numero_ou_zero(linha[idx_total1])
             total2 = _numero_ou_zero(linha[idx_total2])
 
@@ -142,11 +131,11 @@ def exibir_tabela(
                     classes = ["celula-sep"]
                 else:
                     classes = ["celula-negrito"]
-                    lado = _classe_lado(col_idx, idx_sep, total1, total2, margem_empate=margem)
+                    lado = _classe_lado(
+                        col_idx, idx_sep, total1, total2, margem_empate=margem_empate
+                    )
                     if lado:
                         classes.append(lado)
-                    if tipo_destaque == "mata_mata" and col_idx in (idx_total1, idx_total2):
-                        classes.append("celula-total-destaque")
                 celulas.append(_celula(texto, classes))
         else:
             for col_idx, valor in enumerate(linha):
@@ -155,14 +144,10 @@ def exibir_tabela(
                 )
                 texto = formatar_pontuacao(valor) if nome_original in colunas_formatar else valor
                 classes = []
-                if nome_original in ("Nome do time", "time1", "time2") or tipo_destaque == "copa":
+                if nome_original in ("Nome do time", "time1", "time2"):
                     classes.append("celula-negrito")
                 if nome_original in colunas_total:
-                    classes.append(
-                        "celula-total-negativo"
-                        if tipo_destaque == "copa" and i >= qtd_classificados
-                        else "celula-total"
-                    )
+                    classes.append("celula-total")
                 if nome_original == "posicao":
                     classes.append("celula-posicao")
                 if nome_original == "x":
@@ -187,6 +172,118 @@ def exibir_tabela(
         f"<tbody>{''.join(linhas)}</tbody></table></div></div>",
         unsafe_allow_html=True,
     )
+
+
+def _html_nome_time(nome_time, jogador):
+    return f"{nome_time} <span class='copa-jogador'>({jogador})</span>"
+
+
+def _html_jogos_copa(valores):
+    blocos = []
+    for i, valor in enumerate(valores, start=1):
+        texto = formatar_pontuacao(valor)
+        vazio = not texto
+        classe_valor = "copa-jogo-valor copa-jogo-vazio" if vazio else "copa-jogo-valor"
+        blocos.append(
+            "<div class='copa-jogo'>"
+            f"<span class='copa-jogo-rotulo'>{i}º</span>"
+            f"<span class='{classe_valor}'>{texto or '—'}</span>"
+            "</div>"
+        )
+    return f"<div class='copa-jogos'>{''.join(blocos)}</div>"
+
+
+def exibir_grupo_copa(tabela, jogador_por_time, n_jogos, qtd_classificados=3, cor_accent=COR_COPA):
+    """Exibe um grupo da Copa em grade responsiva (tabela no desktop, blocos sem scroll no celular)."""
+    cabecalhos_jogos = "".join(f"<div class='copa-jogo'>{i}º Jogo</div>" for i in range(1, n_jogos + 1))
+    cabecalho = (
+        "<div class='copa-cabecalho copa-cabecalho-desktop copa-grade copa-grade-grupo'>"
+        "<div class='copa-pos'>Pos.</div>"
+        "<div class='copa-time'>Time</div>"
+        f"{cabecalhos_jogos}"
+        "<div class='copa-total'>Total</div>"
+        "</div>"
+        "<div class='copa-cabecalho copa-cabecalho-mobile'>"
+        "<span>Classificação</span><span>Total</span>"
+        "</div>"
+    )
+
+    linhas = []
+    for pos, row in enumerate(tabela.itertuples(index=False), start=1):
+        classificado = pos <= qtd_classificados
+        classe_linha = "linha-classificado" if classificado else "linha-eliminado"
+        classe_total = "celula-total" if classificado else "celula-total-negativo"
+        jogos = [getattr(row, f"jogo_{i}") for i in range(1, n_jogos + 1)]
+        nome_html = _html_nome_time(row.time, jogador_por_time[row.time])
+        linhas.append(
+            f"<div class='copa-linha copa-grade copa-grade-grupo {classe_linha}'>"
+            f"<div class='copa-pos'>{pos}º</div>"
+            f"<div class='copa-time'>{nome_html}</div>"
+            f"{_html_jogos_copa(jogos)}"
+            f"<div class='copa-total {classe_total}'>{formatar_pontuacao(row.total)}</div>"
+            "</div>"
+        )
+
+    st.markdown(
+        f"<div class='copa-card' style='{_estilo_accent(cor_accent)} --n-jogos:{n_jogos};'>"
+        f"{cabecalho}{''.join(linhas)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def exibir_mata_mata_copa(tabela, jogador_por_time, n_jogos, titulo_fase, cor_accent=COR_COPA):
+    """Exibe cada confronto do mata-mata em cartão próprio com os 2 times empilhados,
+    evitando scroll horizontal tanto no desktop quanto no celular."""
+    cabecalhos_jogos = "".join(f"<div class='copa-jogo'>{i}º Jogo</div>" for i in range(1, n_jogos + 1))
+    total_confrontos = len(tabela)
+
+    cartoes = []
+    for idx, row in enumerate(tabela.itertuples(index=False), start=1):
+        rotulo_confronto = f"Confronto {idx}" if total_confrontos > 1 else titulo_fase
+        total1 = _numero_ou_zero(row.total_time1)
+        total2 = _numero_ou_zero(row.total_time2)
+
+        if total1 > total2:
+            estilo1, estilo2 = ("linha-classificado", "celula-total"), ("linha-eliminado", "celula-total-negativo")
+        elif total2 > total1:
+            estilo1, estilo2 = ("linha-eliminado", "celula-total-negativo"), ("linha-classificado", "celula-total")
+        else:
+            estilo1 = estilo2 = ("", "celula-total")
+
+        jogos1 = [getattr(row, f"jogo_{i}_time1") for i in range(1, n_jogos + 1)]
+        jogos2 = [getattr(row, f"jogo_{i}_time2") for i in range(1, n_jogos + 1)]
+
+        cabecalho = (
+            "<div class='copa-cabecalho copa-cabecalho-desktop copa-grade copa-grade-mata-mata'>"
+            f"<div class='copa-time'>{rotulo_confronto}</div>"
+            f"{cabecalhos_jogos}"
+            "<div class='copa-total'>Total</div>"
+            "</div>"
+            "<div class='copa-cabecalho copa-cabecalho-mobile'>"
+            f"<span>{rotulo_confronto}</span><span>Total</span>"
+            "</div>"
+        )
+
+        linhas = []
+        for nome, jogos, total, (classe_linha, classe_total) in (
+            (row.time1, jogos1, row.total_time1, estilo1),
+            (row.time2, jogos2, row.total_time2, estilo2),
+        ):
+            nome_html = _html_nome_time(nome, jogador_por_time[nome])
+            linhas.append(
+                f"<div class='copa-linha copa-grade copa-grade-mata-mata {classe_linha}'>"
+                f"<div class='copa-time'>{nome_html}</div>"
+                f"{_html_jogos_copa(jogos)}"
+                f"<div class='copa-total {classe_total}'>{formatar_pontuacao(total)}</div>"
+                "</div>"
+            )
+
+        cartoes.append(
+            f"<div class='copa-card copa-card-mata-mata' style='{_estilo_accent(cor_accent)} --n-jogos:{n_jogos};'>"
+            f"{cabecalho}{''.join(linhas)}</div>"
+        )
+
+    st.markdown("".join(cartoes), unsafe_allow_html=True)
 
 
 def exibir_subtitulo(texto, cor_accent=COR_LIGA):

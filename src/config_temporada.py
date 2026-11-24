@@ -1,7 +1,7 @@
 """Leitura e validação das configurações de temporada e histórico de campeões."""
 
-from dataclasses import dataclass
 import tomllib
+from dataclasses import dataclass
 
 import pandas as pd
 

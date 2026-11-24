@@ -5,13 +5,11 @@ import streamlit as st
 
 from ui.componentes import (
     COR_COPA,
-    LARGURA_JOGOS,
     LARGURA_NOME_TIME,
-    LARGURA_POSICAO,
-    LARGURA_TOTAL,
-    LARGURA_X,
     exibir_aviso_parcial,
     exibir_cabecalho_secao,
+    exibir_grupo_copa,
+    exibir_mata_mata_copa,
     exibir_seletor_rodada,
     exibir_subtitulo,
     exibir_tabela,
@@ -65,41 +63,23 @@ def render(temporada):
             st.info("Não há confronto de Copa nesta rodada.")
         return
 
-    exibir_cabecalho_secao(
-        f"Copa — {NOMES_FASES.get(estado.fase, estado.fase)}", COR_COPA
-    )
+    titulo_fase = NOMES_FASES.get(estado.fase, estado.fase)
+    exibir_cabecalho_secao(f"Copa — {titulo_fase}", COR_COPA)
     if estado.tem_parcial:
         exibir_aviso_parcial(
             "⏳ Rodada em andamento — os placares incluem pontuações parciais e podem mudar."
         )
 
-    if estado.fase == "fase_de_grupos":
-        n_jogos = len(estado.rodadas_fase)
-        colunas_jogos = [f"jogo_{i}" for i in range(1, n_jogos + 1)]
-        rotulos = (
-            ["Pos.", "Nome do time"]
-            + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
-            + ["Total"]
-        )
-        larguras = (
-            [LARGURA_POSICAO, LARGURA_NOME_TIME]
-            + [LARGURA_JOGOS] * n_jogos
-            + [LARGURA_TOTAL]
-        )
+    n_jogos = len(estado.rodadas_fase)
 
+    if estado.fase == "fase_de_grupos":
         for nome_grupo, dados in estado.grupos.items():
             exibir_subtitulo(NOMES_GRUPOS.get(nome_grupo, nome_grupo), COR_COPA)
-            tabela = dados["tabela_jogo_a_jogo"].copy()
-            tabela.insert(0, "posicao", range(1, len(tabela) + 1))
-            tabela["time"] = tabela["time"].map(config.nome_completo)
-            exibir_tabela(
-                tabela,
-                rotulos=rotulos,
-                tipo_destaque="copa",
+            exibir_grupo_copa(
+                dados["tabela_jogo_a_jogo"],
+                config.jogador_por_nome_time,
+                n_jogos=n_jogos,
                 cor_accent=COR_COPA,
-                colunas_total=["total"],
-                colunas_formatar=colunas_jogos + ["total"],
-                larguras_colunas=larguras,
             )
 
         if estado.times_fora:
@@ -119,38 +99,10 @@ def render(temporada):
         st.info(estado.motivo_bloqueio)
         return
 
-    n_jogos = len(estado.rodadas_fase)
-    colunas_t1 = [f"jogo_{i}_time1" for i in range(1, n_jogos + 1)]
-    colunas_t2 = [f"jogo_{i}_time2" for i in range(1, n_jogos + 1)]
-    colunas_ordem = (
-        ["time1"]
-        + colunas_t1
-        + ["total_time1", "sep", "total_time2"]
-        + list(reversed(colunas_t2))
-        + ["time2"]
-    )
-    tabela = estado.tabela_mata_mata[colunas_ordem].copy()
-    tabela["time1"] = tabela["time1"].map(config.nome_completo)
-    tabela["time2"] = tabela["time2"].map(config.nome_completo)
-
-    rotulos = (
-        ["Time"]
-        + [f"{i}° Jogo" for i in range(1, n_jogos + 1)]
-        + ["Total", "", "Total"]
-        + [f"{i}° Jogo" for i in range(n_jogos, 0, -1)]
-        + ["Time"]
-    )
-    exibir_tabela(
-        tabela,
-        rotulos=rotulos,
-        tipo_destaque="mata_mata",
+    exibir_mata_mata_copa(
+        estado.tabela_mata_mata,
+        config.jogador_por_nome_time,
+        n_jogos=n_jogos,
+        titulo_fase=titulo_fase,
         cor_accent=COR_COPA,
-        colunas_formatar=colunas_t1 + ["total_time1"] + colunas_t2 + ["total_time2"],
-        larguras_colunas=(
-            [LARGURA_NOME_TIME]
-            + [LARGURA_JOGOS] * n_jogos
-            + [LARGURA_TOTAL, LARGURA_X, LARGURA_TOTAL]
-            + [LARGURA_JOGOS] * n_jogos
-            + [LARGURA_NOME_TIME]
-        ),
     )

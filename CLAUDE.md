@@ -202,10 +202,12 @@ Ao fim de cada campeonato:
   `st.segmented_control` + `st.query_params` (`aba`, `rodada_liga`, `rodada_copa`,
   `sub_hall`). Há um script `popstate` em `app.py` que recarrega no Voltar/Avançar.
 - **Tabelas e componentes** (`src/ui/componentes.py` + `src/ui/estilo.css`): HTML limpo com
-  classes CSS (sem estilos inline repetidos); `exibir_tabela(...)` recebe números crus
-  para decidir as classes (`_classe_lado`) e formata com `formatar_pontuacao` (`1.234,56`).
-  Rodadas parciais exibem `⏳` no seletor e banner discreto (`exibir_aviso_parcial`) nas
-  abas Liga e Copa.
+  classes CSS (sem estilos inline repetidos); `exibir_tabela(...)` atende a Liga e recebe
+  números crus para decidir as classes (`_classe_lado`) antes de formatar com
+  `formatar_pontuacao` (`1.234,56`). A Copa usa cartões em CSS Grid
+  (`exibir_grupo_copa` e `exibir_mata_mata_copa`) com os dois times empilhados por
+  confronto, eliminando scroll horizontal no desktop e no celular. Rodadas parciais
+  exibem `⏳` no seletor e banner discreto (`exibir_aviso_parcial`) nas abas Liga e Copa.
 - **CSS** (`src/ui/estilo.css`): lido uma vez por processo (`lru_cache`); usa apenas hooks
   estáveis (`[class*="st-key-nav_"]`, `.st-key-*`, `data-testid`, `aria-checked`, `role`) —
   **nunca** classes `st-emotion-cache-*`. Adaptado a celular (`@media (max-width: 600px)`)
